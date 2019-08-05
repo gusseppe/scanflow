@@ -1,0 +1,19 @@
+FROM continuumio/miniconda3
+
+USER root
+
+RUN apt-get update && apt-get -y dist-upgrade && apt-get install -y openssh-server
+RUN  apt-get -y update
+RUN  apt-get -y install zip 
+RUN  apt-get -y install vim
+
+RUN ssh-keygen -t rsa -f $HOME/.ssh/id_rsa -P "" \
+    && cat $HOME/.ssh/id_rsa.pub >> $HOME/.ssh/authorized_keys
+
+COPY config/ /tmp/
+RUN mv /tmp/ssh_config $HOME/.ssh/config 
+
+RUN pip install mlflow
+
+ENTRYPOINT service ssh start
+

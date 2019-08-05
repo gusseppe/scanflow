@@ -1,0 +1,28 @@
+### MASTER NODE ###
+
+# BASE IMAGE
+FROM autonomicbsc/cluster_hadoop_spark_python
+
+# Jupyter lab
+RUN pip install jupyterlab
+COPY scripts/start-notebook.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/start-notebook.sh
+#ENTRYPOINT ["tini", "-g", "--"]
+#CMD ["start-notebook.sh"]
+RUN mkdir -p /root/project
+WORKDIR /root/project
+
+# MLflow UI
+COPY scripts/start-mlflow.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/start-mlflow.sh
+#ENTRYPOINT ["tini", "-g", "--"]
+#CMD ["start-mlflow.sh"]
+
+# App requirements
+ADD requirements.txt /root/project
+RUN pip install -r requirements.txt
+
+#ENTRYPOINT ["jupyter", "lab", \
+#"--ip=0.0.0.0", "--NotebookApp.token=''", \
+#"--NotebookApp.password=''", \
+#        "--port=8000", "--no-browser", "--allow-root"]

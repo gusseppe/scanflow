@@ -1,0 +1,10 @@
+### WORKER NODE ###
+
+# BASE IMAGE
+FROM autonomicbsc/cluster_hadoop_spark_python
+
+# App requirements
+RUN mkdir -p /root/project
+ADD requirements.txt /root/project
+WORKDIR /root/project
+RUN pip install -r requirements.txt

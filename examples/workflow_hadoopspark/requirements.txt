@@ -1,0 +1,9 @@
+mlflow
+sklearn
+pyspark
+seaborn
+pyarrow
+tensorflow
+keras
+requests
+click
