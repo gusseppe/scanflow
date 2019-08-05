@@ -6,9 +6,6 @@ autodeploy
 .. image:: https://img.shields.io/pypi/v/autodeploy.svg
         :target: https://pypi.python.org/pypi/autodeploy
 
-.. image:: https://img.shields.io/travis/gusseppe/autodeploy.svg
-        :target: https://travis-ci.org/gusseppe/autodeploy
-
 .. image:: https://readthedocs.org/projects/autodeploy/badge/?version=latest
         :target: https://autodeploy.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
