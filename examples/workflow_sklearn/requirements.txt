@@ -3,3 +3,4 @@ pandas
 requests
 click
 mlflow
+six
