@@ -4,16 +4,18 @@ import click
 import logging
 import pandas as pd
 
+from datetime import datetime
+
 print(mlflow.__version__) # it must be at least 1.0
 
-uri = '/root/project/mlruns'
-exp_name = 'single_workflow'
+# uri = '/root/project/mlruns'
+exp_name = f'single_{datetime.now().strftime("%Y%m%d-%H%M%S")}'
 # artifact_location = os.path.join('hdfs:///tmp', exp_name)
 
-mlflow.set_tracking_uri(uri)
-exp_id = mlflow.create_experiment(exp_name)
+# mlflow.set_tracking_uri(uri)
+# exp_id = mlflow.create_experiment(exp_name)
 
-print(f'exp_name = {exp_name} | exp_id = {exp_id}')
+# print(f'exp_name = {exp_name} | exp_id = {exp_id}')
 # print(f'artifact_location = {artifact_location}')
 
 @click.command(help="Gather an input data set")
@@ -21,9 +23,10 @@ print(f'exp_name = {exp_name} | exp_id = {exp_id}')
               default='./raw_data.csv', type=str)
 def gathering(source):
 #     with mlflow.start_run(experiment_id = exp_id) as mlrun:
-    with mlflow.start_run(nested=True, 
-                          run_name='gathering',
-                          experiment_id=exp_id) as mlrun:
+#     with mlflow.start_run(nested=True, 
+#                           run_name='gathering',
+#                           experiment_id=exp_id) as mlrun:
+    with mlflow.start_run(run_name='gathering') as mlrun:
 #         path = f'hdfs://{path}'
 #         cluster_manager = 'yarn'
 #         spark = SparkSession.builder\
