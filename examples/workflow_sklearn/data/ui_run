@@ -1,0 +1,5 @@
+#mlflow server -h 0.0.0.0 -p 8001
+
+mlflow server \
+    --backend-store-uri ./mlruns_modified \
+    --host 0.0.0.0 -p 8001

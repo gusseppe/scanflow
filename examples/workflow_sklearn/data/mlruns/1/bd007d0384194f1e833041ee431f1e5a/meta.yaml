@@ -1,0 +1,15 @@
+artifact_uri: hdfs:///tmp/exp_workflow/bd007d0384194f1e833041ee431f1e5a/artifacts
+end_time: 1562059056163
+entry_point_name: ''
+experiment_id: '1'
+lifecycle_stage: active
+name: ''
+run_id: bd007d0384194f1e833041ee431f1e5a
+run_uuid: bd007d0384194f1e833041ee431f1e5a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1562059053975
+status: 3
+tags: []
+user_id: root

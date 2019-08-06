@@ -1,0 +1,14 @@
+artifact_uri: /home/guess/core/bsc/autodeploy/ml_flow/docker_tests/multistep_workflow/mlruns/0/eac9ba2798c347cbaf4ce17f77db1fc4/artifacts
+end_time: 1559229963181
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: deleted
+name: ''
+run_uuid: eac9ba2798c347cbaf4ce17f77db1fc4
+source_name: /opt/conda/lib/python3.7/site-packages/ipykernel_launcher.py
+source_type: 4
+source_version: ''
+start_time: 1559229963119
+status: 3
+tags: []
+user_id: root

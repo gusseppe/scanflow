@@ -1,0 +1,14 @@
+artifact_uri: /home/guess/core/bsc/autodeploy/ml_flow/docker_tests/multistep_workflow/mlruns/0/a95522faf17947a4bc54e65c00c7cb1b/artifacts
+end_time: null
+entry_point_name: main
+experiment_id: '0'
+lifecycle_stage: deleted
+name: ''
+run_uuid: a95522faf17947a4bc54e65c00c7cb1b
+source_name: /tmp/data/multistep_workflow
+source_type: 3
+source_version: ''
+start_time: 1557830740572
+status: 1
+tags: []
+user_id: root

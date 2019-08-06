@@ -1,0 +1,14 @@
+artifact_uri: /home/guess/core/bsc/autodeploy/ml_flow/docker_tests/multistep_workflow/mlruns/0/e3f0a1c9594548a2af95a184d67bbbe4/artifacts
+end_time: 1558080406056
+entry_point_name: load_raw_data
+experiment_id: '0'
+lifecycle_stage: deleted
+name: ''
+run_uuid: e3f0a1c9594548a2af95a184d67bbbe4
+source_name: file:///home/guess/core/bsc/autodeploy/ml_flow/docker_tests/docker-spark#data/multistep_workflow
+source_type: 3
+source_version: 5758921f53ad987e2d1d8c315f9fb25be3447446
+start_time: 1558080404387
+status: 4
+tags: []
+user_id: guess

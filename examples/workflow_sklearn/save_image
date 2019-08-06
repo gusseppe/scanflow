@@ -1,0 +1,1 @@
+docker save autonomicbsc/workflow_worker | gzip > cluster_worker.tar.gz
