@@ -1,0 +1,8 @@
+sklearn
+pandas
+tensorflow
+keras
+requests
+click
+mlflow
+six
