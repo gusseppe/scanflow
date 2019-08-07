@@ -1,0 +1,14 @@
+name: multistep_example
+
+entry_points:
+  gathering:
+    command: "python gathering.py"
+
+  preprocessing:
+    command: "python preprocessing.py"
+    
+  modeling:
+    command: "python modeling.py"
+    
+  main:
+    command: "python main.py"

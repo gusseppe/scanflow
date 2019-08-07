@@ -1,6 +1,0 @@
-sklearn
-pandas
-requests
-click
-mlflow
-six
