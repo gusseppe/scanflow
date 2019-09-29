@@ -1,4 +1,0 @@
-artifact_location: hdfs:///tmp/exp_workflow
-experiment_id: '1'
-lifecycle_stage: active
-name: exp_workflow
