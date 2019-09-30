@@ -11,22 +11,22 @@ import requests
 
 client = docker.from_env()
 
+
 class Track:
     def __init__(self,
                  api_name='app_single_api',
                  port=5001):
         """
         Example:
-            deploy = Deploy(setup, workflow)
+            deploy = Track(api_name, port)
 
         Parameters:
-            container (object): Container, single mode.
-            workflow (dict): Dict of python files.
+            api_name (str): API's container name.
+            port (int): API's port.
 
         """
         self.api_name = api_name
         self.port = port
-
 
     def pipeline(self):
         self.predict()
@@ -35,12 +35,12 @@ class Track:
 
     def predict(self, sample_input):
         """
-        Build a platform with Docker images.
+        Use the API to predict with a given input .
 
         Parameters:
-            name (str): Prefix of a Docker image.
+            sample_input (str): Input sample.
         Returns:
-            image (object): Docker image.
+            response_json (dict): prediction.
         """
         url = f'http://localhost:{self.port}/invocations'
 

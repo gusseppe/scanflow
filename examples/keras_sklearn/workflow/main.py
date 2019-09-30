@@ -1,20 +1,13 @@
-"""
-Downloads the MovieLens dataset, ETLs it into Parquet, trains an
-ALS model, and uses the ALS model to train a Keras neural network.
-
-See README.rst for more details.
-"""
 
 import click
 import os
 import tempfile
-
+import six
 import mlflow
+
 from mlflow.utils import mlflow_tags
 from mlflow.entities import RunStatus
 from mlflow.utils.logging_utils import eprint
-import six
-
 from mlflow.tracking.fluent import _get_experiment_id
 
 
@@ -64,7 +57,7 @@ def _get_or_run(entrypoint, parameters, git_commit, use_cache=True):
         print("Found existing run for entrypoint=%s and parameters=%s" % (entrypoint, parameters))
         return existing_run
     print("Launching new run for entrypoint=%s and parameters=%s" % (entrypoint, parameters))
-    submitted_run = mlflow.run(".", entrypoint, parameters=parameters, use_conda=False)
+    submitted_run = mlflow.run("./workflow/", entrypoint, parameters=parameters, use_conda=False)
     return mlflow.tracking.MlflowClient().get_run(submitted_run.run_id)
 
 
