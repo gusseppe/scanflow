@@ -1,4 +1,5 @@
-name: multistep_example
+
+name: single_workflow
 
 entry_points:
   gathering:
@@ -6,9 +7,9 @@ entry_points:
 
   preprocessing:
     command: "python preprocessing.py"
-    
+
   modeling:
     command: "python modeling.py"
-    
+
   main:
     command: "python main.py"

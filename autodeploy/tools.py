@@ -2,18 +2,18 @@
 # Author: Gusseppe Bravo <gbravor@uni.pe>
 # License: BSD 3 clause
 
-import pandas as pd
 import logging
-
-from sklearn.datasets import make_classification
 from textwrap import dedent
+
+import pandas as pd
+from sklearn.datasets import make_classification
 
 logging.basicConfig(format='%(asctime)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
 
 
-def generate_ml_project(workflow, name='single_workflow', app_type='single'):
+def generate_mlproject(workflow, name='single_workflow', app_type='single'):
 
     if app_type == 'single':
         template = dedent(f'''
@@ -80,7 +80,7 @@ def generate_data(path, file_system='local', **args):
         logging.info(f'Dataset was generated successfully and saved in {path} ')
 
     elif file_system == 'hdfs':
-        from pyspark.sql import SQLContext, Row, SparkSession
+        from pyspark.sql import SparkSession
 
         cluster_manager = 'yarn'
         spark = SparkSession.builder \

@@ -24,6 +24,7 @@ class Setup:
 
     def __init__(self,
                  single_app_dir=None,
+                 workflow=None,
                  master_file=None,
                  worker_file=None,
                  n_workers=2,
@@ -43,6 +44,7 @@ class Setup:
         """
         self.app_type = app_type
         self.single_app_dir = single_app_dir
+        self.workflow = workflow
         self.master_file = master_file
         self.worker_file = worker_file
         self.n_workers = n_workers
@@ -72,9 +74,9 @@ class Setup:
             list_dir = os.listdir(self.single_app_dir)
 
             # Create Dockerfile if needed
-            dockerfile = [w for w in self.single_app_dir if 'Dockerfile' in w][0]
-            dockerfile_path = os.path.join(self.single_app_dir, 'Dockerfile_test')
-            if dockerfile == '':
+            dockerfile = [w for w in list_dir if 'Dockerfile' in w]
+            dockerfile_path = os.path.join(self.single_app_dir, 'Dockerfile')
+            if len(dockerfile) == 0:
                 dockerfile = tools.generate_dockerfile()
                 logging.info(f'Dockerfile was created successfully.')
                 with open(dockerfile_path, 'w') as f:
@@ -92,10 +94,10 @@ class Setup:
             self.image = image[0]
 
             # Create MLproject if needed
-            mlproject = [w for w in self.single_app_dir if 'MLproject_test' in w][0]
+            mlproject = [w for w in list_dir if 'MLproject_test' in w]
             mlproject_path = os.path.join(self.single_app_dir, 'MLproject')
-            if mlproject == '':
-                mlproject = tools.generate_mlproject()
+            if len(mlproject) == 0:
+                mlproject = tools.generate_mlproject(self.workflow)
                 logging.info(f'MLproject was created successfully.')
                 with open(mlproject_path, 'w') as f:
                     f.writelines(mlproject)
