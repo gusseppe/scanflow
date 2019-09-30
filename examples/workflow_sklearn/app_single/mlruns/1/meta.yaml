@@ -1,0 +1,4 @@
+artifact_location: /root/project/mlruns/1
+experiment_id: '1'
+lifecycle_stage: active
+name: single_workflow

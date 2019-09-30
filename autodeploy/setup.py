@@ -71,10 +71,10 @@ class Setup:
             image (object): Docker image.
         """
         if self.app_type == 'single':
-            list_dir = os.listdir(self.single_app_dir)
+            list_dir_docker = os.listdir(self.single_app_dir)
 
             # Create Dockerfile if needed
-            dockerfile = [w for w in list_dir if 'Dockerfile' in w]
+            dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
             dockerfile_path = os.path.join(self.single_app_dir, 'Dockerfile')
             if len(dockerfile) == 0:
                 dockerfile = tools.generate_dockerfile()
@@ -94,8 +94,10 @@ class Setup:
             self.image = image[0]
 
             # Create MLproject if needed
-            mlproject = [w for w in list_dir if 'MLproject_test' in w]
-            mlproject_path = os.path.join(self.single_app_dir, 'MLproject')
+            workflow_path = os.path.join(self.single_app_dir, 'workflow')
+            list_dir_mlproject = os.listdir(workflow_path)
+            mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+            mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
             if len(mlproject) == 0:
                 mlproject = tools.generate_mlproject(self.workflow)
                 logging.info(f'MLproject was created successfully.')
@@ -121,13 +123,13 @@ class Setup:
         """
         if self.app_type == 'single':
             ports = {'8001/tcp': 8001}
-            host_path = os.path.join(os.path.abspath('.'), 'app_single')
+            host_path = os.path.join(self.single_app_dir)
 
-            try:
-                os.makedirs(host_path)
-            except OSError as exception:
-                if exception.errno != errno.EEXIST:
-                    raise
+            # try:
+            #     os.makedirs(host_path)
+            # except OSError as exception:
+            #     if exception.errno != errno.EEXIST:
+            #         raise
 
             container_path = '/root/project'
             volumen = {host_path: {'bind': container_path, 'mode': 'rw'}}
