@@ -3,13 +3,11 @@
 # Author: Gusseppe Bravo <gbravor@uni.pe>
 # License: BSD 3 clause
 
-import subprocess
-import docker
-import errno
-import requests
 import json
 import time
-import sys
+
+import docker
+import requests
 
 client = docker.from_env()
 

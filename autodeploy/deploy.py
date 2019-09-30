@@ -2,10 +2,11 @@
 # Author: Gusseppe Bravo <gbravor@uni.pe>
 # License: BSD 3 clause
 
-import subprocess
-import docker
-import errno
 import logging
+import subprocess
+import os
+
+import docker
 
 logging.basicConfig(format='%(asctime)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
@@ -16,7 +17,7 @@ client = docker.from_env()
 
 class Deploy:
     def __init__(self,
-                 platform, workflow):
+                 platform):
         """
         Example:
             deployer = Deploy(platform, workflow)
@@ -29,7 +30,7 @@ class Deploy:
         self.platform = platform
         self.containers = platform.containers
         self.app_type = platform.app_type
-        self.workflow = workflow
+        self.workflow = platform.workflow
 
     def pipeline(self):
         self.run_workflow()
@@ -49,7 +50,10 @@ class Deploy:
         if self.app_type == 'single':
             logging.info(f'Running workflow: type={self.app_type} .')
             container = self.containers[0]
-            result = container.exec_run(cmd=f"python {self.workflow['main']}")
+
+            main_path = os.path.join(self.platform.single_app_dir,
+                                                   'workflow', self.workflow['main'])
+            result = container.exec_run(cmd=f"python {main_path}")
             logging.info(f" Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
 
             logging.info(f" Workflow finished successfully. ")
