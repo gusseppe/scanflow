@@ -87,9 +87,10 @@ class Deploy:
             logging.info(f" Image: {api_image_name} was built successfully. ")
 
             logging.info(f" Creating container: {api_container_name}. ")
-            cmd_run = f'docker run --name {api_container_name} -p  5001:8080 {api_image_name}'
+            cmd_run = f'docker run -d --name {api_container_name} -p  5001:8080 {api_image_name}'
             logs_run_ctn = subprocess.check_output(cmd_run.split())
             logging.info(f" Container: {api_container_name} was created successfully. ")
+            logging.info(f" API at: htpp://localhost:5001. ")
             # logging.info(f" Output container: {logs_run_ctn} ")
 
             self.logs_build_image = logs_build_image

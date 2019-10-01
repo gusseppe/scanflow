@@ -8,4 +8,4 @@ flavors:
     env: conda.yaml
     loader_module: mlflow.keras
     python_version: 3.7.3
-utc_time_created: '2019-09-30 15:55:02.118426'
+utc_time_created: '2019-10-01 07:16:02.491451'
