@@ -11,11 +11,11 @@ import tempfile
 # artifact_location = os.path.join('hdfs:///tmp', exp_name)
 
 @click.command(help="Preprocess the input data set")
-@click.option("--source", help="Input path raw data set", 
+@click.option("--source", help="Input path raw data set",
               default='./raw_data.csv', type=str)
 def preprocessing(source):
 #     with mlflow.start_run(experiment_id = exp_id) as mlrun:
-#     with mlflow.start_run(nested=True, 
+#     with mlflow.start_run(nested=True,
 #                           run_name='preprocessing',
 #                           experiment_id=exp_id) as mlrun:
     with mlflow.start_run(run_name='preprocessing') as mlrun:
@@ -26,17 +26,17 @@ def preprocessing(source):
 #         .appName("gather_data")\
 #         .config("spark.driver.allowMultipleContexts", "true")\
 #         .getOrCreate()
-        
+
 #         spark_df = spark.read.parquet(source)
         df = pd.read_csv(source)
-        logging.info(f'Dataset: {source} was read successfully ') 
+        logging.info(f'Dataset: {source} was read successfully ')
         df.head(5)
-        
+
         #Some preprocessing steps here
         df_cleaned = df.dropna()
 #         spark_df.limit(10000).write.mode('overwrite').parquet(target)
-        
-        
+
+
 #         df_cleaned = spark_df.toPandas()
         mlflow.log_param(key='n_samples', value=len(df_cleaned))
         mlflow.log_param(key='n_features', value=len(df_cleaned.columns)-1)
@@ -44,9 +44,7 @@ def preprocessing(source):
         mlflow.log_param(key='dtypes', value=dict_types)
         mlflow.log_param(key='classes', value=df_cleaned['y'].unique())
         mlflow.log_param(key='problem_type', value='classification')
-        
 
-        
         tmpdir = tempfile.mkdtemp()
         tmp_file = os.path.join(tmpdir, 'preprocessed_data.csv')
         df_cleaned.to_csv(tmp_file, index=False)
@@ -54,7 +52,7 @@ def preprocessing(source):
         mlflow.log_artifact(tmp_file)
 #         mlflow.log_artifact(tmp_file, "preprocessed_data")
         logging.info(f'Proprocessed dataset was saved successfully')
-        
+
 #         mlflow.log_artifact(path, path_artifact)
 #         mlflow.log_artifact('/root/project/ui_run', path_artifact)
 

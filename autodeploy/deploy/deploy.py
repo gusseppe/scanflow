@@ -120,7 +120,7 @@ class Deploy:
             api_container_name = api_image_name
             logging.info(f" Creating container: {api_container_name}. ")
 
-            ports = {'8000/tcp': 5001}
+            ports = {'8080/tcp': 5001}
             container = client.containers.run(api_image_name, name=api_container_name,
                                               tty=True, detach=True,
                                               ports=ports)
