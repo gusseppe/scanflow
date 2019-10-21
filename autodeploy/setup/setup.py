@@ -9,7 +9,7 @@ import logging
 
 from autodeploy import tools
 
-logging.basicConfig(format='%(asctime)s - %(message)s',
+logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
 
