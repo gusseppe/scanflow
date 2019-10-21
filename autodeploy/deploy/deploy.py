@@ -8,7 +8,7 @@ import os
 
 import docker
 
-logging.basicConfig(format='%(asctime)s - %(message)s',
+logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
 
@@ -105,30 +105,37 @@ class Deploy:
             self.logs_build_image = logs_build_image
             # self.logs_run_ctn = logs_run_ctn
 
-    def run_api(self, name='app', app_type='single'):
+    def run_api(self, image_name='app_single_api', app_type='single'):
         """
         Run the API model into a Docker container.
 
         Parameters:
-            name (str): Prefix of a Docker container.
+            image_name (str): Name API image.
             app_type (str): Type of the app to be deployed.
         Returns:
             image (object): Docker container.
         """
         if app_type == 'single':
-            api_image_name = f'{name}_{app_type}_api'
+            # api_image_name = f'{name}_{app_type}_api'
+            api_image_name = image_name
             api_container_name = api_image_name
-            logging.info(f" Creating container: {api_container_name}. ")
+            logging.info(f"Creating container: {api_container_name}. ")
 
             ports = {'8080/tcp': 5001}
-            container = client.containers.run(api_image_name, name=api_container_name,
-                                              tty=True, detach=True,
-                                              ports=ports)
 
-            logging.info(f'API model is running as {api_container_name} container.')
-            # cmd_run = f'docker run -d --name {api_container_name} -p  5001:8080 {api_image_name}'
-            # logs_run_ctn = subprocess.check_output(cmd_run.split())
-            logging.info(f" Container: {api_container_name} was created successfully. ")
-            logging.info(f" API at: htpp://localhost:5001. ")
+            try:
+                container = client.containers.run(api_image_name, name=api_container_name,
+                                                  tty=True, detach=True,
+                                                  ports=ports)
 
-            self.api_container_object = container
+                logging.info(f'API model is running as {api_container_name} container.')
+                # cmd_run = f'docker run -d --name {api_container_name} -p  5001:8080 {api_image_name}'
+                # logs_run_ctn = subprocess.check_output(cmd_run.split())
+                logging.info(f"Container: {api_container_name} was created successfully. ")
+                logging.info(f"API at: htpp://localhost:5001. ")
+                self.api_container_object = container
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"Container creation failed.")
+
