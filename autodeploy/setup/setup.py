@@ -87,27 +87,43 @@ class Setup:
             # Build image
             self.tag_image = f'{name}_{self.app_type}'
             # Add try exceptions with docker.errors
-            image = client.images.build(path=self.single_app_dir,
-                                        dockerfile=dockerfile_path,
-                                        tag=self.tag_image)
-            logging.info(f'Image {self.tag_image} was built successfully.')
-            self.image = image[0]
+            exist_image = None
+            try:
+                exist_image = client.images.get(self.tag_image)
 
-            # Create MLproject if needed
-            workflow_path = os.path.join(self.single_app_dir, 'workflow')
-            list_dir_mlproject = os.listdir(workflow_path)
-            mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-            mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
-            if len(mlproject) == 0:
-                mlproject = tools.generate_mlproject(self.workflow)
-                logging.info(f'MLproject was created successfully.')
-                with open(mlproject_path, 'w') as f:
-                    f.writelines(mlproject)
-            else:
-                logging.info(f'MLproject was found.')
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"Container creation failed.")
 
+            try:
 
-            return image
+                if exist_image is None:
+                    image = client.images.build(path=self.single_app_dir,
+                                                dockerfile=dockerfile_path,
+                                                tag=self.tag_image)
+                    logging.info(f'Image {self.tag_image} was built successfully.')
+                    self.image = image[0]
+
+                    # Create MLproject if needed
+                    workflow_path = os.path.join(self.single_app_dir, 'workflow')
+                    list_dir_mlproject = os.listdir(workflow_path)
+                    mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+                    mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
+                    if len(mlproject) == 0:
+                        mlproject = tools.generate_mlproject(self.workflow)
+                        logging.info(f'MLproject was created successfully.')
+                        with open(mlproject_path, 'w') as f:
+                            f.writelines(mlproject)
+                    else:
+                        logging.info(f'MLproject was found.')
+
+                    return image
+                else:
+                    logging.warning(f'Image: {self.tag_image} already exists.')
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"Container creation failed.")
 
     def run(self, name='app'):
         """
@@ -134,26 +150,32 @@ class Setup:
             container_path = '/root/project'
             volumen = {host_path: {'bind': container_path, 'mode': 'rw'}}
             # Add try exceptions with docker.errors
-            container = client.containers.run(self.tag_image, name=self.tag_image,
-                                              tty=True, detach=True,
-                                              volumes=volumen, ports=ports)
 
-            logging.info(f'Image {self.tag_image} is running as {self.tag_image} container.')
+            try:
+                container = client.containers.run(self.tag_image, name=self.tag_image,
+                                                  tty=True, detach=True,
+                                                  volumes=volumen, ports=ports)
 
-            cmd = """
-            mlflow server \
-                --backend-store-uri ./mlruns \
-                --host 0.0.0.0 -p 8001
-            """
-            container.exec_run(cmd=cmd, detach=True)
+                logging.info(f'Image {self.tag_image} is running as {self.tag_image} container.')
 
-            self.mlflow_url = f'0.0.0.0:8001'
+                cmd = """
+                mlflow server \
+                    --backend-store-uri ./workflow/mlruns \
+                    --host 0.0.0.0 -p 8001
+                """
+                container.exec_run(cmd=cmd, detach=True)
 
-            logging.info(f'MLflow server is running at {self.mlflow_url}')
+                self.mlflow_url = f'0.0.0.0:8001'
 
-            self.containers = [container]
+                logging.info(f'MLflow server is running at {self.mlflow_url}')
 
-            return container
+                self.containers = [container]
+
+                return container
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"Container creation failed.")
 
     def stop(self):
         """

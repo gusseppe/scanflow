@@ -1,0 +1,15 @@
+artifact_uri: file:///home/guess/Desktop/autodeploy/examples/leaf/workflow/mlruns/0/59279325930445e4ab2018bf8c034c69/artifacts
+end_time: 1571858647305
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: 59279325930445e4ab2018bf8c034c69
+run_uuid: 59279325930445e4ab2018bf8c034c69
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1571858642945
+status: 3
+tags: []
+user_id: guess
