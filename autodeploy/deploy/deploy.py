@@ -46,33 +46,57 @@ class Deploy:
         self.api_port = api_port
 
     def pipeline(self):
-        logging.info(f'Pipeline: run_workflow() and deploy() are running.')
         self.run_workflow()
         self.deploy()
 
         return self
 
-    def run_workflow(self):
+    def run_workflow(self, plat_container_name=None):
         """
         Run a workflow that consists of several python files.
 
         Parameters:
-            name (str): Prefix of a Docker image.
+            plat_container_name (str): Container of a deployed platform.
         Returns:
             image (object): Docker image.
         """
         if self.app_type == 'single':
             logging.info(f'Running workflow: type={self.app_type} .')
-            container = self.containers[0]
+            if self.containers is not None:
+                logging.info(f'Using platform container.')
+                container = self.containers[0]
 
-            # main_path = os.path.join(self.platform.single_app_dir,
-                                                   #'workflow', self.workflow['main'])
-            # print(main_path)
-            result = container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
-            logging.info(f" Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
+                # main_path = os.path.join(self.platform.single_app_dir,
+                                                       #'workflow', self.workflow['main'])
+                # print(main_path)
+                result = container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
+                logging.info(f" Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
 
-            logging.info(f" Workflow finished successfully. ")
-            self.logs_workflow = result.output.decode("utf-8")
+                logging.info(f" Workflow finished successfully. ")
+                self.logs_workflow = result.output.decode("utf-8")
+            else:
+                if plat_container_name is not None:
+                    logging.info(f'Using given container: {plat_container_name}')
+
+                    plat_image = None
+                    try:
+                        plat_image = client.containers.get(plat_container_name)
+
+                    except docker.api.client.DockerException as e:
+                        logging.error(f"{e}")
+                        logging.error(f"Container running failed.")
+
+                    if plat_image is not None:
+                        result = plat_image.exec_run(cmd=f"python workflow/{self.workflow['main']}")
+                        logging.info(f" Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
+
+                        logging.info(f" Workflow finished successfully. ")
+                        self.logs_workflow = result.output.decode("utf-8")
+
+                    else:
+                        logging.info(f'Cannot find platform container: {plat_container_name}.')
+                else:
+                    logging.warning(f'Platform image name was not provided.')
 
     def deploy(self, api_image_name='app_single_api'):
         """
@@ -84,7 +108,7 @@ class Deploy:
             image (object): Docker container.
         """
         if self.app_type == 'single':
-            logging.info(f' Deploying model as API: type={self.app_type} .')
+            logging.info(f'Deploying model as API: type={self.app_type} .')
             # api_image_name = f'{name}_{self.app_type}_api'
             api_container_name = api_image_name
 

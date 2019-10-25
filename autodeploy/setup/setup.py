@@ -54,8 +54,6 @@ class Setup:
         self.ports = None
 
     def pipeline(self):
-        logging.info(f'Pipeline: build() and run() are running.')
-
         self.build()
         self.run()
 
@@ -71,6 +69,7 @@ class Setup:
             image (object): Docker image.
         """
         if self.app_type == 'single':
+            logging.info(f'Building platform, type: {self.app_type}.')
             list_dir_docker = os.listdir(self.single_app_dir)
 
             # Create Dockerfile if needed
@@ -86,7 +85,7 @@ class Setup:
 
             # Build image
             self.tag_image = f'{name}_{self.app_type}'
-            # Add try exceptions with docker.errors
+
             exist_image = None
             try:
                 exist_image = client.images.get(self.tag_image)
@@ -138,6 +137,7 @@ class Setup:
             containers (object): Docker container.
         """
         if self.app_type == 'single':
+            logging.info(f'Running platform, type: {self.app_type}.')
             ports = {'8001/tcp': 8001}
             host_path = os.path.join(self.single_app_dir)
 

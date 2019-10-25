@@ -51,8 +51,15 @@ def modeling(preprocessed_data):
         X_train, X_test, y_train, y_test = train_test_split(
                                 X, y, test_size=test_size)
     
+        # Later wrap the logs with autodeploy log_metadata
+        X_train.to_csv('X_train.csv', index=False)
+        mlflow.log_artifact('X_train.csv')
+        
         X_test.to_csv('X_test.csv', index=False)
         mlflow.log_artifact('X_test.csv')
+        
+        y_train.to_csv('y_train.csv', index=False)
+        mlflow.log_artifact('y_train.csv')   
         
         y_test.to_csv('y_test.csv', index=False)
         mlflow.log_artifact('y_test.csv')       
