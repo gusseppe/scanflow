@@ -51,12 +51,12 @@ class Track:
 
         return self
 
-    def predict(self, input_to_predict, to_save=False, path_pred=None):
+    def predict(self, input_df, to_save=False, path_pred=None):
         """
         Use the API to predict with a given input .
 
         Parameters:
-            input_to_predict (str): Input sample.
+            input_df (pandas): Input sample.
             to_save (bool): Save the predictions or not.
             path_pred (str): Where to save the predictions.
         Returns:
@@ -66,8 +66,12 @@ class Track:
 
         try:
             start = time.time()
+            input_data_json = {
+                'columns': list(input_df.columns),
+                'data': input_df.values.tolist()
+            }
             response = requests.post(
-                         url=url, data=json.dumps(input_to_predict),
+                         url=url, data=json.dumps(input_data_json),
                          headers={"Content-type": "application/json; format=pandas-split"})
             response_json = json.loads(response.text)
 
@@ -75,26 +79,25 @@ class Track:
             logging.info(f'Predicting from port: {self.port}')
             logging.info(f'Time elapsed: {end-start}')
 
-            self.input_to_predict = input_to_predict
+            self.input_to_predict = input_df
             self.predictions = response_json
 
             # preds = [d['0'] for d in self.predictions]
             preds = [d for d in self.predictions]
-            df_pred = pd.DataFrame(self.input_to_predict['data'],
-                                   columns=self.input_to_predict['columns'])
-            df_pred['pred'] = preds
+            # df_pred = pd.DataFrame(self.input_to_predict['data'],
+            #                        columns=self.input_to_predict['columns'])
+            input_df['pred'] = preds
 
-            self.input_pred = df_pred
+            self.input_pred = input_df
 
             if to_save:
                 self.save_prediction(path_pred)
 
-            return df_pred
+            return self.input_pred
+
         except requests.exceptions.HTTPError as e:
             logging.error(f"{e}")
             logging.error(f"Request to API failed.")
-
-
 
     def save_prediction(self, path_pred):
         """

@@ -6,6 +6,12 @@ import seaborn as sns
 from scipy.stats import ks_2samp
 
 
+def add_noise(df, mu=0, sigma=0.1):
+    noise = np.random.normal(mu, sigma, [len(df),len(df.columns)])
+    df_noise = df + noise
+    return df_noise
+
+
 def test_corr(x1, x2):
     """
       Test correlation matrix similarity using
@@ -91,22 +97,22 @@ def test_ks(x1, x2):
     return ks_df
 
 
-def overall_test(x1, x2, test=['ks'], verbose=False):
+def overall_test(x1, x2, test=['ks'], verbose=False, n_cols=4):
     print(f'########## Comparing two numerical dataframes ##########')
 
     if 'ks' in test:
         print()
         print(f'######## Kolmogorov-Smirnov test ########')
-        df_ks = test_ks(x1, x2)
+        df_ks = test_ks(x1[x1.columns[:n_cols]], x2[x2.columns[:n_cols]])
         if verbose:
             #       x1.plot(kind='density', title='Old matrix')
             fig = plt.figure(figsize=[7, 7])
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
             plt.subplots_adjust(hspace=0.3)
-            for col in x1:
+            for col in x1.columns[:n_cols]:
                 _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
-            for col in x2:
+            for col in x2.columns[:n_cols]:
                 _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
             #       _ = sns.distplot(x1).set_title("Old matrix")
             #       x2.plot(kind='density', title='New matrix')
@@ -117,19 +123,20 @@ def overall_test(x1, x2, test=['ks'], verbose=False):
     if 'corr' in test:
         print()
         print(f'######## Correlation matrix similarity test ########')
-        corr_df, explain_df = test_corr(x1, x2)
+        corr_df, explain_df = test_corr(x1[x1.columns[:n_cols]],
+                                        x2[x2.columns[:n_cols]])
         if verbose:
             fig = plt.figure(figsize=[7, 7])
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
 
             plt.subplots_adjust(hspace=0.3)
-            _ = sns.heatmap(x1.corr(), vmin=-1, vmax=1,
+            _ = sns.heatmap(x1[x1.columns[:n_cols]].corr(), vmin=-1, vmax=1,
                             annot=True, ax=ax1).set_title("Old matrix")
             pp1 = sns.pairplot(x1, height=1.5)
             pp1.fig.suptitle("Old matrix", y=1.02)
 
-            _ = sns.heatmap(x2.corr(), vmin=-1, vmax=1,
+            _ = sns.heatmap(x2[x2.columns[:n_cols]].corr(), vmin=-1, vmax=1,
                             annot=True, ax=ax2).set_title("New matrix")
             pp2 = sns.pairplot(x2, height=1.5)
             pp2.fig.suptitle("New matrix", y=1.02)

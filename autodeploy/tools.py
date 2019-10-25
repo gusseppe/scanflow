@@ -8,7 +8,7 @@ from textwrap import dedent
 import pandas as pd
 from sklearn.datasets import make_classification
 
-logging.basicConfig(format='%(asctime)s - %(message)s',
+logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
 
