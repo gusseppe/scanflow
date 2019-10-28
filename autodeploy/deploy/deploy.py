@@ -5,8 +5,9 @@
 import logging
 import subprocess
 import os
-
 import docker
+
+from textwrap import dedent
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
@@ -111,14 +112,35 @@ class Deploy:
             logging.info(f'Deploying model as API: type={self.app_type} .')
             # api_image_name = f'{name}_{self.app_type}_api'
             api_container_name = api_image_name
+            logs_build_image = ''
 
             models_path = os.path.join(self.single_app_dir, 'workflow', 'models')
 
             logging.info(f" Building image: {api_image_name}. Please wait... ")
-            cmd_build = f'mlflow models build-docker -m {models_path} -n {api_image_name}'
-            logs_build_image = subprocess.check_output(cmd_build.split())
-            # logging.info(f" Output image: {logs_build_image} ")
-            logging.info(f" Image: {api_image_name} was built successfully. ")
+
+            exist_image = None
+
+            try:
+                exist_image = client.images.get(api_image_name)
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"API creation failed.")
+            try:
+
+                if exist_image is None:
+
+                    cmd_build = f'mlflow models build-docker -m {models_path} -n {api_image_name}'
+                    logs_build_image = subprocess.check_output(cmd_build.split())
+                    # logging.info(f" Output image: {logs_build_image} ")
+                    logging.info(f" Image: {api_image_name} was built successfully. ")
+
+                else:
+                    logging.warning(f'Image: {api_image_name} already exists.')
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"API creation failed.")
 
             self.run_api(api_image_name, app_type='single',
                          api_port=self.api_port)
@@ -171,3 +193,10 @@ class Deploy:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
 
+    def __repr__(self):
+        _repr = dedent(f"""
+        Platform = (
+            server=0.0.0.0:8001),
+            API=0.0.0.0:{self.api_port}),
+        """)
+        return _repr
