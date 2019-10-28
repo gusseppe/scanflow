@@ -8,6 +8,7 @@ import os
 import logging
 
 from autodeploy import tools
+from textwrap import dedent
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
@@ -51,7 +52,9 @@ class Setup:
         self.tag_image = None
         self.image = None
         self.containers = None
-        self.ports = None
+        self.port_dash = 8001
+        self.mlflow_url = None
+        self.dash_ctn_name = None
 
     def pipeline(self):
         self.build()
@@ -70,9 +73,9 @@ class Setup:
         """
         if self.app_type == 'single':
             logging.info(f'Building platform, type: {self.app_type}.')
-            list_dir_docker = os.listdir(self.single_app_dir)
 
             # Create Dockerfile if needed
+            list_dir_docker = os.listdir(self.single_app_dir)
             dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
             dockerfile_path = os.path.join(self.single_app_dir, 'Dockerfile')
             if len(dockerfile) == 0:
@@ -83,17 +86,30 @@ class Setup:
             else:
                 logging.info(f'Dockerfile was found.')
 
+            # Create MLproject if needed
+            workflow_path = os.path.join(self.single_app_dir, 'workflow')
+            list_dir_mlproject = os.listdir(workflow_path)
+            mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+            mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
+            if len(mlproject) == 0:
+                mlproject = tools.generate_mlproject(self.workflow)
+                logging.info(f'MLproject was created successfully.')
+                with open(mlproject_path, 'w') as f:
+                    f.writelines(mlproject)
+            else:
+                logging.info(f'MLproject was found.')
+
             # Build image
             self.tag_image = f'{name}_{self.app_type}'
 
             exist_image = None
+
             try:
                 exist_image = client.images.get(self.tag_image)
 
             except docker.api.client.DockerException as e:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
-
             try:
 
                 if exist_image is None:
@@ -103,19 +119,6 @@ class Setup:
                     logging.info(f'Image {self.tag_image} was built successfully.')
                     self.image = image[0]
 
-                    # Create MLproject if needed
-                    workflow_path = os.path.join(self.single_app_dir, 'workflow')
-                    list_dir_mlproject = os.listdir(workflow_path)
-                    mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-                    mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
-                    if len(mlproject) == 0:
-                        mlproject = tools.generate_mlproject(self.workflow)
-                        logging.info(f'MLproject was created successfully.')
-                        with open(mlproject_path, 'w') as f:
-                            f.writelines(mlproject)
-                    else:
-                        logging.info(f'MLproject was found.')
-
                     return image
                 else:
                     logging.warning(f'Image: {self.tag_image} already exists.')
@@ -124,13 +127,13 @@ class Setup:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
 
-    def run(self, name='app'):
+    def run(self, dash_ctn_name=None, port=8001):
         """
         Run an image that yields a platform.
 
         Parameters:
-            name (str): Prefix of a Docker container.
-            ports (dict): Dictionary describing ports to bind.
+            dash_ctn_name (str): Docker container name for dashboard.
+            port (dict): Dictionary describing ports to bind.
                 Example: {'8001/tcp': 8001}
 
         Returns:
@@ -138,8 +141,10 @@ class Setup:
         """
         if self.app_type == 'single':
             logging.info(f'Running platform, type: {self.app_type}.')
-            ports = {'8001/tcp': 8001}
-            host_path = os.path.join(self.single_app_dir)
+            self.port_dash = port
+            ports = {'8001/tcp': port}
+            # host_path = os.path.join(self.single_app_dir)
+            host_path = self.single_app_dir
 
             # try:
             #     os.makedirs(host_path)
@@ -152,21 +157,24 @@ class Setup:
             # Add try exceptions with docker.errors
 
             try:
-                container = client.containers.run(self.tag_image, name=self.tag_image,
+                if dash_ctn_name is None:
+                    dash_ctn_name = self.tag_image
+
+                self.dash_ctn_name = dash_ctn_name
+                container = client.containers.run(self.tag_image, name=dash_ctn_name,
                                                   tty=True, detach=True,
                                                   volumes=volumen, ports=ports)
 
-                logging.info(f'Image {self.tag_image} is running as {self.tag_image} container.')
+                logging.info(f'Image {self.tag_image} is running as {dash_ctn_name} container.')
 
                 cmd = """
-                mlflow server \
-                    --backend-store-uri ./workflow/mlruns \
+                mlflow server 
+                    --backend-store-uri ./workflow/mlruns 
                     --host 0.0.0.0 -p 8001
                 """
                 container.exec_run(cmd=cmd, detach=True)
 
-                self.mlflow_url = f'0.0.0.0:8001'
-
+                self.mlflow_url = f'0.0.0.0:{port}'
                 logging.info(f'MLflow server is running at {self.mlflow_url}')
 
                 self.containers = [container]
@@ -189,5 +197,15 @@ class Setup:
 
         client.containers.prune()
         logging.info(f'Stopped containers were deleted.')
+
+    def __repr__(self):
+        _repr = dedent(f"""
+        Platform = (
+            image: {self.tag_image},
+            container: {self.dash_ctn_name},
+            type={self.app_type}),
+            server=0.0.0.0:{self.port_dash}),
+        """)
+        return _repr
 
 

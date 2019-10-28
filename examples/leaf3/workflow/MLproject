@@ -1,0 +1,12 @@
+
+name: single_workflow
+
+entry_points:
+  gathering:
+    command: "python gathering.py"
+
+  preprocessing:
+    command: "python preprocessing.py"
+
+  main:
+    command: "python main.py"
