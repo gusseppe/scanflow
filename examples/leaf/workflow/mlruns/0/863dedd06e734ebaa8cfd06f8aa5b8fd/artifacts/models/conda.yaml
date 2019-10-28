@@ -1,9 +1,0 @@
-channels:
-- defaults
-dependencies:
-- python=3.7.3
-- scikit-learn=0.20.1
-- pip:
-  - mlflow
-  - cloudpickle==0.6.1
-name: mlflow-env
