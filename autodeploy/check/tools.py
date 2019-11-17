@@ -97,23 +97,35 @@ def test_ks(x1, x2):
     return ks_df
 
 
-def overall_test(x1, x2, test=['ks'], verbose=False, n_cols=4):
+def overall_test(x1, x2, test=['ks'], cols=None, verbose=False):
     print(f'########## Comparing two numerical dataframes ##########')
 
     if 'ks' in test:
         print()
         print(f'######## Kolmogorov-Smirnov test ########')
-        df_ks = test_ks(x1[x1.columns[:n_cols]], x2[x2.columns[:n_cols]])
+        n_cols = 3
+        if cols is not None:
+            df_ks = test_ks(x1[cols], x2[cols])
+        else:
+            df_ks = test_ks(x1[x1.columns[:n_cols]], x2[x2.columns[:n_cols]])
+
         if verbose:
             #       x1.plot(kind='density', title='Old matrix')
             fig = plt.figure(figsize=[7, 7])
             ax1 = fig.add_subplot(211)
             ax2 = fig.add_subplot(212)
             plt.subplots_adjust(hspace=0.3)
-            for col in x1.columns[:n_cols]:
-                _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
-            for col in x2.columns[:n_cols]:
-                _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
+            if cols is not None:
+                for col in cols:
+                    _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
+                for col in cols:
+                    _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
+            else:
+                for col in x1.columns[:n_cols]:
+                    _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
+                for col in x2.columns[:n_cols]:
+                    _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
+
             #       _ = sns.distplot(x1).set_title("Old matrix")
             #       x2.plot(kind='density', title='New matrix')
             plt.show()
