@@ -19,7 +19,7 @@ client = docker.from_env()
 
 class Setup:
     """
-       Setup the desired platform to work with.
+       Setup the desired environment to work with.
 
     """
 
@@ -40,7 +40,7 @@ class Setup:
             worker_file (str): Path to a Dockerfile, cluster mode.
             n_workers (int): if app_type=='cluster' then it means the
                              number of slaves (workers)
-            app_type (str): Type of platform.
+            app_type (str): Type of environment.
 
         """
         self.app_type = app_type
@@ -49,22 +49,25 @@ class Setup:
         self.master_file = master_file
         self.worker_file = worker_file
         self.n_workers = n_workers
-        self.tag_image = None
-        self.image = None
-        self.containers = None
-        self.port_dash = 8001
-        self.mlflow_url = None
-        self.dash_ctn_name = None
+        self.env_image_name = None
+        self.env_image = None
+        self.env_container = None
+        self.tracker_port = None
+        self.tracker_url = None
+        # self.tracker_name = None
+        self.registry = None
+        # self.pipeline = dict()  # All nodes
+        self.env_container_name = None
 
-    def pipeline(self):
-        self.build()
-        self.run()
+    def run_pipeline(self):
+        self.create_env()
+        self.run_env()
 
         return self
 
-    def build(self, name='app'):
+    def create_env(self, name='app'):
         """
-        Build a platform with Docker images.
+        Build a environment with Docker images.
 
         Parameters:
             name (str): Prefix of a Docker image.
@@ -72,118 +75,101 @@ class Setup:
             image (object): Docker image.
         """
         if self.app_type == 'single':
-            logging.info(f'Building platform, type: {self.app_type}.')
 
             # Create Dockerfile if needed
-            list_dir_docker = os.listdir(self.single_app_dir)
-            dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
-            dockerfile_path = os.path.join(self.single_app_dir, 'Dockerfile')
-            if len(dockerfile) == 0:
-                dockerfile = tools.generate_dockerfile()
-                logging.info(f'Dockerfile was created successfully.')
-                with open(dockerfile_path, 'w') as f:
-                    f.writelines(dockerfile)
-            else:
-                logging.info(f'Dockerfile was found.')
+            dockerfile_path = tools.generate_dockerfile(self.single_app_dir,
+                                                         app_type='single')
 
             # Create MLproject if needed
-            workflow_path = os.path.join(self.single_app_dir, 'workflow')
-            list_dir_mlproject = os.listdir(workflow_path)
-            mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-            mlproject_path = os.path.join(self.single_app_dir, 'workflow', 'MLproject')
-            if len(mlproject) == 0:
-                mlproject = tools.generate_mlproject(self.workflow)
-                logging.info(f'MLproject was created successfully.')
-                with open(mlproject_path, 'w') as f:
-                    f.writelines(mlproject)
-            else:
-                logging.info(f'MLproject was found.')
+            mlproject_path = tools.generate_mlproject(self.single_app_dir,
+                                                 self.workflow,
+                                                 name='single_workflow', app_type='single')
 
             # Build image
-            self.tag_image = f'{name}_{self.app_type}'
+            self.env_image_name = f'{name}_{self.app_type}'
+            # logging.info(f'[+] Building environment [{self.env_image_name}]. Type [{self.app_type}]')
 
             exist_image = None
 
             try:
-                exist_image = client.images.get(self.tag_image)
+                exist_image = client.images.get(self.env_image_name)
 
             except docker.api.client.DockerException as e:
                 logging.error(f"{e}")
-                logging.error(f"Container creation failed.")
+                logging.error(f"[-] Container creation failed.")
             try:
 
                 if exist_image is None:
                     image = client.images.build(path=self.single_app_dir,
-                                                dockerfile=dockerfile_path,
-                                                tag=self.tag_image)
-                    logging.info(f'Image {self.tag_image} was built successfully.')
-                    self.image = image[0]
+                                                     dockerfile=dockerfile_path,
+                                                     tag=self.env_image_name)
+                    logging.info(f'[+] Image [{self.env_image_name}] was built successfully.')
+                    self.env_image = image[0]
 
                     return image
                 else:
-                    logging.warning(f'Image: {self.tag_image} already exists.')
+                    logging.warning(f'[+] Image [{self.env_image_name}] already exists.')
+                    logging.info(f'[+] Image [{self.env_image_name}] was loaded successfully.')
 
             except docker.api.client.DockerException as e:
                 logging.error(f"{e}")
-                logging.error(f"Container creation failed.")
+                logging.error(f"[-] Container creation failed.")
 
-    def run(self, dash_ctn_name=None, port=8001):
+    def run_env(self, name=None, port=8001, tracker=True):
         """
-        Run an image that yields a platform.
+        Run an the environment (Docker image)
 
         Parameters:
-            dash_ctn_name (str): Docker container name for dashboard.
+            name (str): Docker container name for dashboard.
             port (dict): Dictionary describing ports to bind.
                 Example: {'8001/tcp': 8001}
+            tracker (bool): If a tracker should be activated.
 
         Returns:
             containers (object): Docker container.
         """
         if self.app_type == 'single':
-            logging.info(f'Running platform, type: {self.app_type}.')
-            self.port_dash = port
+            self.tracker_port = port
             ports = {'8001/tcp': port}
             # host_path = os.path.join(self.single_app_dir)
             host_path = self.single_app_dir
-
-            # try:
-            #     os.makedirs(host_path)
-            # except OSError as exception:
-            #     if exception.errno != errno.EEXIST:
-            #         raise
 
             container_path = '/root/project'
             volumen = {host_path: {'bind': container_path, 'mode': 'rw'}}
             # Add try exceptions with docker.errors
 
             try:
-                if dash_ctn_name is None:
-                    dash_ctn_name = self.tag_image
+                if name is None:
+                    name = self.env_image_name
 
-                self.dash_ctn_name = dash_ctn_name
-                container = client.containers.run(self.tag_image, name=dash_ctn_name,
-                                                  tty=True, detach=True,
-                                                  volumes=volumen, ports=ports)
+                # logging.info(f'[+] Running tracker = [{name}]. Type: [{self.app_type}]')
+                env_container = client.containers.run(image=self.env_image_name, name=name,
+                                                          tty=True, detach=True,
+                                                          volumes=volumen, ports=ports)
+                self.env_container_name = name
+                # logging.info(f'[+] Environment ({self.env_image_name}) is running as {name} container.')
+                logging.info(f'[+] Environment [{name}] was run successfully')
 
-                logging.info(f'Image {self.tag_image} is running as {dash_ctn_name} container.')
+                if tracker:
+                    # self.tracker_name = name
+                    cmd = f"""
+                    mlflow server 
+                        --backend-store-uri ./workflow/mlruns 
+                        --host 0.0.0.0 -p {port}
+                    """
+                    env_container.exec_run(cmd=cmd, detach=True)
 
-                cmd = """
-                mlflow server 
-                    --backend-store-uri ./workflow/mlruns 
-                    --host 0.0.0.0 -p 8001
-                """
-                container.exec_run(cmd=cmd, detach=True)
+                    self.tracker_url = f'0.0.0.0:{port}'
+                    logging.info(f'[+] Tracker server was run successfully')
+                    logging.info(f'[+] Tracker server is running at [{self.tracker_url}]')
 
-                self.mlflow_url = f'0.0.0.0:{port}'
-                logging.info(f'MLflow server is running at {self.mlflow_url}')
+                self.env_container = {'name': name, 'ctn': env_container}
 
-                self.containers = [container]
-
-                return container
+                return env_container
 
             except docker.api.client.DockerException as e:
                 logging.error(f"{e}")
-                logging.error(f"Container creation failed.")
+                logging.error(f"Tracker running failed.")
 
     def stop(self):
         """
@@ -200,12 +186,32 @@ class Setup:
 
     def __repr__(self):
         _repr = dedent(f"""
-        Platform = (
-            image: {self.tag_image},
-            container: {self.dash_ctn_name},
+        Environment = (
+            image: {self.env_image_name},
+            container: {self.env_container_name},
             type={self.app_type}),
-            server=0.0.0.0:{self.port_dash}),
+            tracker=0.0.0.0:{self.tracker_port}),
         """)
         return _repr
 
+    def save_env(self, registry_name):
+        """
+        Run an image that yields a environment.
 
+        Parameters:
+            registry_name (str): Name of registry to save.
+
+        Returns:
+            containers (object): Docker container.
+        """
+        if self.app_type == 'single':
+            try:
+                # for name_ctn, ctn in self.env_container.items():
+                self.env_container['ctn'].commit(repository=registry_name,
+                                         tag=self.env_container['name'],
+                                         message='First commit')
+                logging.info(f"Environment [{self.env_container['name']}] was saved to registry [{registry_name}].")
+
+            except docker.api.client.DockerException as e:
+                logging.error(f"{e}")
+                logging.error(f"Container creation failed.")

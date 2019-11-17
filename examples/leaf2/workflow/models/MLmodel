@@ -8,4 +8,4 @@ flavors:
     pickled_model: model.pkl
     serialization_format: cloudpickle
     sklearn_version: 0.21.3
-utc_time_created: '2019-10-28 10:50:53.162157'
+utc_time_created: '2019-11-12 07:56:29.868089'
