@@ -9,6 +9,7 @@ import docker
 import time
 import requests
 import json
+from autodeploy import tools
 
 from textwrap import dedent
 
@@ -20,10 +21,7 @@ client = docker.from_env()
 
 
 class Deploy:
-    def __init__(self,
-                 environment=None,
-                 api_image_name=None,
-                 api_port=5001):
+    def __init__(self, workflower):
         """
         Example:
             deployer = Deploy(platform)
@@ -31,23 +29,27 @@ class Deploy:
         Parameters:
             environment (object): The platform that comes from setup class.
             api_image_name (object): The platform that comes from setup class.
-            api_port (object): The platform that comes from setup class.
+            predictor_port (object): The platform that comes from setup class.
 
         """
-        if environment is not None:
-            self.platform = environment
-            self.env_container = environment.env_container
-            self.app_type = environment.app_type
-            self.workflow = environment.workflow
-            self.single_app_dir = environment.single_app_dir
+        # if environment is not None:
+        #     self.platform = environment
+        #     self.env_container = environment.env_container
+        #     self.app_type = environment.app_type
+        #     self.workflow = environment.workflow
+        #     self.single_app_dir = environment.single_app_dir
 
+        self.workflower = workflower
+        self.app_dir = workflower.app_dir
         self.logs_workflow = None
         self.logs_build_image = None
         self.logs_run_ctn = None
         self.api_image_name = None
-        self.api_container_name = None
         self.api_container_object = None
-        self.api_port = api_port
+        self.predictor_repr = None
+        self.input_df = None
+        self.pred_df = None
+        # self.predictor_port = predictor_port
 
     def pipeline(self):
         self.run_workflow()
@@ -55,157 +57,111 @@ class Deploy:
 
         return self
 
-    def run_workflow(self, env_container_name=None):
-        """
-        Run a workflow that consists of several python files.
-
-        Parameters:
-            env_container_name (str): Container of a deployed environment.
-        Returns:
-            image (object): Docker image.
-        """
-        if self.app_type == 'single':
-            # logging.info(f'Running workflow: type={self.app_type} .')
-            logging.info(f'[+] Running workflow on [{env_container_name}].')
-            if self.env_container is not None:
-                logging.info(f"[+] Using environment container [{self.env_container['name']}].")
-                container = self.env_container['ctn']
-
-                # main_path = os.path.join(self.environment.single_app_dir,
-                                                       #'workflow', self.workflow['main'])
-                # print(main_path)
-                result = container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
-                logging.info(f"[+] Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
-
-                logging.info(f"[+] Workflow finished successfully. ")
-                self.logs_workflow = result.output.decode("utf-8")
-            else:
-                if env_container_name is not None:
-                    logging.info(f'[+] Using given container: {env_container_name}')
-
-                    env_image = None
-                    try:
-                        env_image = client.containers.get(env_container_name)
-
-                    except docker.api.client.DockerException as e:
-                        logging.error(f"{e}")
-                        logging.error(f"[-] Container running failed.")
-
-                    if env_image is not None:
-                        result = env_image.exec_run(cmd=f"python workflow/{self.workflow['main']}")
-                        logging.info(f"[+] Main file ({self.workflow['main']}) output:  {result.output.decode('utf-8')} ")
-
-                        logging.info(f"[+] Workflow finished successfully. ")
-                        self.logs_workflow = result.output.decode("utf-8")
-
-                    else:
-                        logging.info(f'[-] Cannot find environment container: {env_container_name}.')
-                else:
-                    logging.warning(f'[-] Platform image name was not provided.')
-
-    def build_predictor(self, api_image_name='app_single_api'):
+    def build_predictor(self, image='app_single_api', name='predictor'):
         """
         Deploy a ML model into a Docker container.
 
         Parameters:
-            api_image_name (str): Name API image.
+            image (str): Name API image.
         Returns:
             image (object): Docker container.
         """
-        if self.app_type == 'single':
-            logging.info(f'[+] Deploying predictor as API: type={self.app_type} .')
-            # api_image_name = f'{name}_{self.app_type}_api'
-            api_container_name = api_image_name
-            logs_build_image = ''
+        logging.info(f'[+] Building predictor [{image}] as API. Please wait.')
+        # image = f'{image}_{self.app_type}_api'
+        predictor_container_name = image
+        logs_build_image = ''
 
-            models_path = os.path.join(self.single_app_dir, 'workflow', 'models')
+        models_path = os.path.join(self.app_dir, 'workflow', 'models')
 
-            logging.info(f"[+] Building image: {api_image_name}. Please wait... ")
+        # logging.info(f"[+] Building image: {image}. Please wait... ")
+        predictor_from_repo = None
 
-            exist_image = None
+        try:
+            predictor_from_repo = client.images.get(name=image)
 
-            try:
-                exist_image = client.images.get(api_image_name)
+        except docker.api.client.DockerException as e:
+            # logging.error(f"{e}")
+            # logging.error(f"API creation failed.")
+            logging.info(f"[+] Predictor [{image}] not found in repository. Building a new one.")
+        try:
+            if predictor_from_repo is None:
 
-            except docker.api.client.DockerException as e:
-                logging.error(f"{e}")
-                logging.error(f"API creation failed.")
-            try:
+                cmd_build = f'mlflow models build-docker -m {models_path} -n {name}'
+                logs_build_image = subprocess.check_output(cmd_build.split())
+                # logging.info(f" Output image: {logs_build_image} ")
+                logging.info(f"[+] Predictor: {name} was built successfully. ")
+                new_predictor = client.images.get(name=name)
+                predictor_repr = {'name': 'predictor', 'env': new_predictor}
+                self.predictor_repr = predictor_repr
 
-                if exist_image is None:
+            else:
+                predictor_repr = {'name': name, 'env': predictor_from_repo}
+                self.predictor_repr = predictor_repr
+                logging.warning(f'[+] Predictor: {image} loaded successfully.')
 
-                    cmd_build = f'mlflow models build-docker -m {models_path} -n {api_image_name}'
-                    logs_build_image = subprocess.check_output(cmd_build.split())
-                    # logging.info(f" Output image: {logs_build_image} ")
-                    logging.info(f"[+] Image: {api_image_name} was built successfully. ")
+        except docker.api.client.DockerException as e:
+            logging.error(f"{e}")
+            logging.error(f"API creation failed.")
 
-                else:
-                    logging.warning(f'[+] Image: {api_image_name} loaded successfully.')
+        # self.predictor_container_name = predictor_container_name
+        self.logs_build_image = logs_build_image
+        # self.logs_run_ctn = logs_run_ctn
 
-            except docker.api.client.DockerException as e:
-                logging.error(f"{e}")
-                logging.error(f"API creation failed.")
-
-            # self.run_predictor(api_image_name, app_type='single',
-            #              api_port=self.api_port)
-            # logging.info(f" Creating container: {api_container_name}. ")
-            # cmd_run = f'docker run -d --name {api_container_name} -p  5001:8080 {api_image_name}'
-            # logs_run_ctn = subprocess.check_output(cmd_run.split())
-            # logging.info(f" Container: {api_container_name} was created successfully. ")
-            # logging.info(f" API at: htpp://localhost:5001. ")
-            # logging.info(f" Output container: {logs_run_ctn} ")
-
-            self.api_image_name = api_image_name
-            self.api_container_name = api_container_name
-            self.logs_build_image = logs_build_image
-            # self.logs_run_ctn = logs_run_ctn
-
-    def run_predictor(self, api_image_name='app_single_api',
-                app_type='single', api_port=5001):
+    def run_predictor(self, image='app_single_api', name='predictor', port=5001):
         """
         Run the API model into a Docker container.
 
         Parameters:
-            api_image_name (str): Name API image.
+            image (str): Name API image.
             app_type (str): Type of the app to be deployed.
-            api_port (int): Port of the app to be deployed.
+            port (int): Port of the app to be deployed.
         Returns:
             image (object): Docker container.
         """
-        if app_type == 'single':
-            # api_image_name = f'{name}_{app_type}_api'
-            # api_image_name = image_name
-            api_container_name = f'Predictor_{app_type}'
-            self.api_container_name = api_container_name
-            logging.info(f"[+] Running predictor [{api_container_name}] ")
+            # image = f'{image}_{app_type}_api'
+            # image = image_name
+        logging.info(f"[+] Running predictor [{name}].")
 
-            ports = {'8080/tcp': api_port}
+        env_container = tools.start_image(image=image,
+                                          name=name,
+                                          port=port)
+        # try:
+        #     container = client.containers.run(image=image,
+        #                                       name=name,
+        #                                       tty=True, detach=True,
+        #                                       ports=ports)
+        #
+        #     logging.info(f"[+] Predictor [{name}] was created successfully. ")
+        # for w in self.workflows:
+        #     if w['name'] == name:
+        #         # w.update({'ctns': containers + tracker_ctn})
+        #         w.update({'ctn': env_container, 'port': port})
+        self.predictor_repr.update({'ctn': env_container, 'port': port})
+        # self.workflows[0].update({'ctn': env_container, 'port': port})
 
-            try:
-                container = client.containers.run(image=api_image_name,
-                                                  name=api_container_name,
-                                                  tty=True, detach=True,
-                                                  ports=ports)
-
-                # logging.info(f'[+] Predictor is running as {api_container_name} container.')
-                # cmd_run = f'docker run -d --name {api_container_name} -p  5001:8080 {api_image_name}'
-                # logs_run_ctn = subprocess.check_output(cmd_run.split())
-                logging.info(f"[+] Predictor [{api_container_name}] was created successfully. ")
-                logging.info(f"[+] Predictor API at [htpp://localhost:{api_port}]. ")
-                # self.api_container_object = container
-                self.api_container_object = {'name': api_container_name, 'ctn': container}
-
-            except docker.api.client.DockerException as e:
-                logging.error(f"{e}")
-                logging.error(f"Container creation failed.")
+        logging.info(f"[+] Predictor API at [http://localhost:{port}]. ")
 
     def __repr__(self):
         _repr = dedent(f"""
         Predictor = (
-            Name: {self.api_container_name},
-            API=0.0.0.0:{self.api_port}),
+            Name: {self.predictor_repr['name']},
+            Env: {self.predictor_repr['env']},
+            Container: {self.predictor_repr['ctn']},
+            API=0.0.0.0:{self.predictor_repr['port']}),
         """)
         return _repr
+
+    def stop_predictor(self, name='predictor'):
+
+        try:
+            container_from_env = client.containers.get(name)
+            container_from_env.stop()
+            container_from_env.remove()
+            logging.info(f"[+] Predictor: [{name}] was stopped successfully.")
+
+        except docker.api.client.DockerException as e:
+            # logging.error(f"{e}")
+            logging.info(f"[+] Predictor: [{name}] is not running in local.")
 
     # def __repr__(self):
     #     _repr = dedent(f"""
@@ -231,15 +187,15 @@ class Deploy:
             try:
                 # for name_ctn, ctn in self.env_container.items():
                 self.api_container_object['ctn'].commit(repository=registry_name,
-                                                 tag=self.api_container_object['name'],
+                                                 tag=self.api_container_object['image'],
                                                  message='First commit')
-                logging.info(f"[+] Environment [{self.api_container_object['name']}] was saved to registry [{registry_name}].")
+                logging.info(f"[+] Environment [{self.api_container_object['image']}] was saved to registry [{registry_name}].")
 
             except docker.api.client.DockerException as e:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
 
-    def predict(self, input_df, to_save=False, path_pred=None):
+    def predict(self, input_df, port=5001, to_save=False, path_pred=None):
         """
         Use the API to predict with a given input .
 
@@ -250,7 +206,7 @@ class Deploy:
         Returns:
             response_json (dict): prediction.
         """
-        url = f'http://localhost:{self.api_port}/invocations'
+        url = f'http://localhost:{port}/invocations'
 
         try:
             start = time.time()
@@ -264,24 +220,24 @@ class Deploy:
             response_json = json.loads(response.text)
 
             end = time.time()
-            logging.info(f'Predicting from port: {self.api_port}')
+            logging.info(f'Predicting from port: {port}')
             logging.info(f'Time elapsed: {end-start}')
 
-            self.input_to_predict = input_df
-            self.predictions = response_json
+            self.input_df = input_df
+            # self.predictions = response_json
 
             # preds = [d['0'] for d in self.predictions]
-            preds = [d for d in self.predictions]
+            preds = [d for d in response_json]
             # df_pred = pd.DataFrame(self.input_to_predict['data'],
             #                        columns=self.input_to_predict['columns'])
             input_df['pred'] = preds
 
-            self.input_pred = input_df
+            self.pred_df = input_df
 
             if to_save:
                 self.save_prediction(path_pred)
 
-            return self.input_pred
+            return self.pred_df
 
         except requests.exceptions.HTTPError as e:
             logging.error(f"{e}")
@@ -298,7 +254,7 @@ class Deploy:
         """
 
         path_pred = os.path.join(path_pred, 'predictions.csv')
-        self.input_pred.to_csv(path_pred, index=False)
+        self.pred_df.to_csv(path_pred, index=False)
         logging.info(f'Input and predictions were saved at: {path_pred}')
 
         # self.input_pred.to_csv(path_pred,

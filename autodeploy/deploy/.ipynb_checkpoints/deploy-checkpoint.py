@@ -71,7 +71,7 @@ class Deploy:
                 logging.info(f"[+] Using environment container [{self.env_container['name']}].")
                 container = self.env_container['ctn']
 
-                # main_path = os.path.join(self.environment.single_app_dir,
+                # main_path = os.path.join(self.environment.app_dir,
                                                        #'workflow', self.workflow['main'])
                 # print(main_path)
                 result = container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
