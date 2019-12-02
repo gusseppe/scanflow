@@ -1,0 +1,6 @@
+name: workflow_leaf
+entry_points:
+  gathering:
+    command: b
+  preprocessing:
+    command: b

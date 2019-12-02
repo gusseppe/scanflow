@@ -6,6 +6,7 @@ import logging
 import os
 import pandas as pd
 import docker
+import oyaml as yaml
 
 from textwrap import dedent
 from sklearn.datasets import make_classification
@@ -16,83 +17,177 @@ logging.getLogger().setLevel(logging.INFO)
 
 client = docker.from_env()
 
-def generate_mlproject(app_dir, workflow, name='single_workflow', app_type='single'):
-    if app_type == 'single':
-        workflow_path = os.path.join(app_dir, 'workflow')
-        list_dir_mlproject = os.listdir(workflow_path)
-        mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-        mlproject_path = os.path.join(app_dir, 'workflow', 'MLproject')
-        if len(mlproject) == 0:
-            mlproject = mlproject_template(app_dir, workflow)
-            logging.info(f'[+] MLproject was created successfully.')
-            with open(mlproject_path, 'w') as f:
-                f.writelines(mlproject)
-        else:
-            logging.info(f'[+] MLproject was found.')
-        return mlproject_path
 
-    return None
+def generate_compose(app_dir, environment, wflow):
+    # workflow_path = os.path.join(app_dir, 'workflow')
+    # list_dir_mlproject = os.listdir(workflow_path)
+    # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+    compose_path = os.path.join(app_dir, 'workflow', 'docker-compose')
+    # if len(mlproject) == 0:
+    mlproject = compose_template(environment, wflow)
+    # with open(compose_path, 'w') as f:
+    #     f.writelines(mlproject)
+    filename = f"{compose_path}_{environment['name']}.yml"
+    with open(filename, 'w') as f:
+        yaml.dump(mlproject, f, default_flow_style=False)
 
-
-def mlproject_template(workflow, name='single_workflow', app_type='single'):
-
-    if app_type == 'single':
-        template = dedent(f'''
-                name: {name}
-
-                entry_points:
-                  gathering:
-                    command: "python {workflow['gathering']}"
-
-                  preprocessing:
-                    command: "python {workflow['preprocessing']}"
-                    
-                  modeling:
-                    command: "python {workflow['modeling']}"
-                    
-                  main:
-                    command: "python {workflow['main']}"
-        ''')
-        return template
-
-    return None
+    logging.info(f'[+] Compose file [{filename}] was created successfully.')
+    # else:
+    #     logging.info(f'[+] MLproject was found.')
+    return compose_path
 
 
-def generate_dockerfile(app_dir, app_type='single'):
-    if app_type == 'single':
-        list_dir_docker = os.listdir(app_dir)
-        dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
-        dockerfile_path = os.path.join(app_dir, 'Dockerfile')
-        if len(dockerfile) == 0:
-            dockerfile = dockerfile_template(app_type)
-            logging.info(f'[+] Dockerfile was created successfully.')
-            with open(dockerfile_path, 'w') as f:
-                f.writelines(dockerfile)
-        else:
-            logging.info(f'[+] Dockerfile was found.')
+def compose_template(environment, wflow):
 
-        return dockerfile_path
+    mlproject = {'version': 3,
+                 'services': {
+                     environment['name']: {'image': environment['name'],
+                                           'depends_on': 'tracker',
+                                           'MLFLOW_TRACKING_URI': f"http://tracker:{wflow['tracker']['port']}"},
 
-    return None
+                     'tracker': {'image': f"tracker_{wflow['name']}",
+                                 'expose': f"{wflow['tracker']['port']}",
+                                 'ports': f"{wflow['tracker']['port']}:{wflow['tracker']['port']}"
+                     }
+                 }
+                }
+
+    return mlproject
 
 
-def dockerfile_template(app_type='single'):
-    if app_type == 'single':
-        template = dedent(f'''
-                    FROM continuumio/miniconda3
+def generate_mlproject(app_dir, environment, wflow_name='workflow_app'):
+    # workflow_path = os.path.join(app_dir, 'workflow')
+    # list_dir_mlproject = os.listdir(workflow_path)
+    # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+    mlproject_path = os.path.join(app_dir, 'workflow', 'MLproject')
+    # if len(mlproject) == 0:
+    mlproject = mlproject_template(environment, wflow_name)
+    # with open(mlproject_path, 'w') as f:
+    #     f.writelines(mlproject)
+    filename = f"{mlproject_path}_{environment['name']}"
+    with open(filename, 'w') as f:
+        yaml.dump(mlproject, f, default_flow_style=False)
 
-                    USER root
+    logging.info(f'[+] MLproject [{filename}] was created successfully.')
+# else:
+#     logging.info(f'[+] MLproject was found.')
+    return mlproject_path
 
-                    # App requirements
-                    RUN mkdir -p /root/project
-                    ADD requirements.txt /root/project
-                    WORKDIR /root/project
-                    RUN pip install -r requirements.txt
 
-        ''')
-        return template
+def mlproject_template(environment, wflow_name):
 
-    return None
+    mlproject = {'name': f"{wflow_name}_{environment['name']}",
+                 'entry_points': {
+                     'main': {'command': f"python {environment['file']}"}
+                 }
+                }
+
+    return mlproject
+
+# def mlproject_template(workflow, name='workflow'):
+#
+#     mlproject = {'name': name,
+#                  'entry_points': {
+#                      wflow['name']: {'command': wflow['file']} for wflow in workflow
+#                  }
+#                 }
+#
+#     return mlproject
+
+
+def generate_dockerfile(app_dir, environment):
+    # if app_type == 'single':
+    # list_dir_docker = os.listdir(app_dir)
+    # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
+    filename = f"Dockerfile_{environment['name']}"
+    dockerfile_path = os.path.join(app_dir, 'workflow', filename)
+    # if len(dockerfile) == 0:
+    dockerfile = dockerfile_template(environment)
+    with open(dockerfile_path, 'w') as f:
+        f.writelines(dockerfile)
+    logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
+    # else:
+    #     logging.info(f'[+] Dockerfile was found.')
+
+    return dockerfile_path
+
+    # return None
+
+
+def dockerfile_template(environment):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+
+                RUN mkdir /app
+                ADD {environment['requirements']} /app
+                WORKDIR /app
+                RUN pip install -r {environment['requirements']}
+
+    ''')
+    return template
+# def dockerfile_template(environment):
+#     # if app_type == 'single':
+#     template = dedent(f'''
+#                 FROM continuumio/miniconda3
+#
+#                 RUN mkdir /app
+#                 RUN mkdir -p /app/container
+#                 ADD {environment['requirements']} /app/container
+#                 ADD {environment['file']} /app/container
+#                 ADD MLproject_{environment['name']} /app/container/MLproject
+#                 WORKDIR /app
+#                 RUN pip install -r {environment['requirements']}
+#
+#     ''')
+#     return template
+
+
+def generate_tracker(app_dir, port, name):
+    # if app_type == 'single':
+    # list_dir_docker = os.listdir(app_dir)
+    # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
+    filename = f'Dockerfile_tracker_{name}'
+    dockerfile_path = os.path.join(app_dir, 'workflow', filename)
+    dockerfile = dockerfile_tracker(port)
+
+    with open(dockerfile_path, 'w') as f:
+        f.writelines(dockerfile)
+    logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
+    # else:
+    #     logging.info(f'[+] Dockerfile was found.')
+
+    return dockerfile_path
+
+    # return None
+
+
+def dockerfile_tracker(port=8001):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='autodeploy'
+                
+                ENV MLFLOW_HOME  /mlflow
+                ENV MLFLOW_HOST  0.0.0.0
+                ENV MLFLOW_PORT  {port}
+                ENV MLFLOW_BACKEND  /mlflow/mlruns
+                ENV MLFLOW_ARTIFACT  /mlflow/mlruns
+
+                RUN pip install mlflow
+                RUN mkdir $MLFLOW_HOME
+                RUN mkdir -p $MLFLOW_BACKEND
+                RUN mkdir -p $MLFLOW_ARTIFACT
+                
+                WORKDIR $MLFLOW_HOME
+                
+                CMD mlflow server  \
+                --backend-store-uri $MLFLOW_BACKEND \
+                --default-artifact-root $MLFLOW_ARTIFACT \
+                --host $MLFLOW_HOST -p $MLFLOW_PORT
+                
+    ''')
+    return template
 
 
 def create_registry(name='autodeploy_registry'):
@@ -111,12 +206,25 @@ def create_registry(name='autodeploy_registry'):
     # registry_image = 'registry' # Registry version 2 from Docker Hub
     registry_image = 'registry:latest' # Registry version 2 from Docker Hub
     restart = {"Name": "always"}
+
+    try:
+        container = client.containers.get(name)
+        logging.info(f"[+] Registry: [{name}] exists in local.")
+
+        # return {'name': name, 'ctn': container_from_env}
+        return container
+
+    except docker.api.client.DockerException as e:
+        # logging.error(f"{e}")
+        logging.info(f"[+] Registry: [{name}] is not running in local. Running a new one.")
+
     try:
         container = client.containers.run(image=registry_image,
                                           name=name,
                                           tty=True, detach=True,
                                           restart_policy=restart,
                                           ports=ports)
+
         logging.info(f'[+] Registry [{name}] was built successfully.')
         logging.info(f'[+] Registry [{name}] is running at port [{port_host}].')
 
@@ -125,6 +233,151 @@ def create_registry(name='autodeploy_registry'):
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
         logging.error(f"Registry creation failed.")
+
+
+def build_image(name, app_dir, dockerfile_path):
+
+    image_from_repo = None
+
+    try:
+        image_from_repo = client.images.get(name)
+        # environments.append({name: {'image': image_from_repo}})
+
+    except docker.api.client.DockerException as e:
+        # logging.error(f"{e}")
+        logging.info(f"[+] Image [{name}] not found in repository. Building a new one.")
+    try:
+
+        if image_from_repo is None:
+            image = client.images.build(path=os.path.join(app_dir, 'workflow'),
+                                        dockerfile=dockerfile_path,
+                                        tag=name)
+            logging.info(f'[+] Image [{name}] was built successfully.')
+            # self.env_image = image[0]
+            # environments.append({name: {'image': image[0]}})
+            return {'name': name, 'image': image[0]}
+
+        else:
+            logging.warning(f'[+] Image [{name}] already exists.')
+            logging.info(f'[+] Image [{name}] was loaded successfully.')
+
+            return {'name': name, 'image': image_from_repo}
+
+    except docker.api.client.DockerException as e:
+        logging.error(f"{e}")
+        logging.error(f"[-] Image building failed.")
+
+
+def start_image(image, name, network=None, volume=None, port=None, environment=None):
+
+    container_from_env = None
+
+    try:
+        container_from_env = client.containers.get(name)
+
+        if container_from_env.status == 'exited':
+            container_from_env.stop()
+            container_from_env.remove()
+            container_from_env = None
+        # return {'name': name, 'ctn': container_from_env}
+        # return container_from_env
+
+    except docker.api.client.DockerException as e:
+        # logging.error(f"{e}")
+        logging.info(f"[+] Environment: [{name}] has not been started in local. Starting a new one.")
+    try:
+
+        if container_from_env is None:  # does not exist in repo
+            if (volume is not None) and (port is None):
+                if environment is not None:
+                    env_container = client.containers.run(image=image, name=name,
+                                                          network=network,
+                                                          tty=True, detach=True,
+                                                          volumes=volume, environment=environment)
+
+                    # logging.info(f'[+] Container [{name}] was built successfully.')
+                    logging.info(f'[+] Environment: [{name}] was started successfully with tracker')
+                else:
+                    env_container = client.containers.run(image=image, name=name,
+                                                          network=network,
+                                                          tty=True, detach=True,
+                                                          volumes=volume)
+
+                    # logging.info(f'[+] Container [{name}] was built successfully.')
+                    logging.info(f'[+] Environment: [{name}] was started successfully')
+
+                # self.env_image = image[0]
+                # environments.append({name: {'image': image[0]}})
+                return env_container
+
+            elif (volume is not None) and (port is not None):
+                ports = {f'{port}/tcp': port}
+                # tracker_image_name = f"tracker_{workflow['name']}"
+                tracker_container = client.containers.run(image=image, name=name,
+                                                          network=network,
+                                                          tty=True, detach=True,
+                                                          ports=ports, volumes=volume)
+                logging.info(f'[+] Tracker: [{name}] was started successfully')
+
+                return tracker_container
+            elif port is not None and volume is None and environment is None:
+                port_predictor_ctn = 8080
+                ports = {f'{port_predictor_ctn}/tcp': port}
+                # tracker_image_name = f"tracker_{workflow['name']}"
+                predictor = client.containers.run(image=image, name=name,
+                                                  tty=True, detach=True,
+                                                  ports=ports)
+                logging.info(f'[+] Predictor: [{name}] was started successfully')
+
+                return predictor
+        else:
+            logging.warning(f'[+] Environment: [{name}] is already running.')
+            # logging.info(f'[+] Image [{name}] was loaded successfully.')
+
+    except docker.api.client.DockerException as e:
+        logging.error(f"{e}")
+        logging.error(f"[-] Starting environment: [{name}] failed.")
+
+
+def run_environment(name, network, volume=None, port=None, environment=None):
+
+    container_from_env = None
+    pass
+
+def start_network(name):
+
+    net_from_env = None
+
+    try:
+        net_from_env = client.networks.get(name)
+
+        # if container_from_env.status == 'exited':
+        #     container_from_env.stop()
+        #     container_from_env.remove()
+        #     container_from_env = None
+        # return {'name': name, 'ctn': container_from_env}
+        # return container_from_env
+
+    except docker.api.client.DockerException as e:
+        # logging.error(f"{e}")
+        logging.info(f"[+] Network: [{name}] has not been started in local. Starting a new one.")
+    try:
+
+        if net_from_env is None: # does not exist in repo
+            net = client.networks.create(name=name)
+
+            # logging.info(f'[+] Container [{name}] was built successfully.')
+            logging.info(f'[+] Network: [{name}] was started successfully')
+            # self.env_image = image[0]
+            # environments.append({name: {'image': image[0]}})
+            return net
+        else:
+            logging.warning(f'[+] Network: [{name}] is already running.')
+            # logging.info(f'[+] Image [{name}] was loaded successfully.')
+
+    except docker.api.client.DockerException as e:
+        logging.error(f"{e}")
+        logging.error(f"[-] Starting network: [{name}] failed.")
 
 
 def generate_data(path, file_system='local', **args):

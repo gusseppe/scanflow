@@ -1,0 +1,8 @@
+name: workflow1
+entry_points:
+  gathering:
+    command: gathering.py
+  preprocessing:
+    command: preprocessing.py
+  main1:
+    command: main1.py
