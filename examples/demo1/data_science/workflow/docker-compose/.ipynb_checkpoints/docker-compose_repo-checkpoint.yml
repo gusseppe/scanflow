@@ -1,0 +1,53 @@
+version: '3'
+services:
+  gathering:
+    image: gathering
+    container_name: gathering_20191216113319
+    networks:
+    - network_workflow1
+    depends_on: tracker_workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker_workflow1:8001
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/:/app
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/tracker_workflow1:/mlflow
+    tty: 'true'
+  preprocessing:
+    image: preprocessing
+    container_name: preprocessing_20191216113319
+    networks:
+    - network_workflow1
+    depends_on: tracker_workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker_workflow1:8001
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/:/app
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/tracker_workflow1:/mlflow
+    tty: 'true'
+  modeling:
+    image: modeling
+    container_name: modeling_20191216113319
+    networks:
+    - network_workflow2
+    depends_on: tracker_workflow2
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker_workflow2:8002
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/:/app
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_science/tracker_workflow2:/mlflow
+    tty: 'true'
+  tracker_workflow1:
+    image: tracker_workflow1
+    container_name: tracker_workflow1_20191216113319
+    networks: network_workflow1
+    volumes: /home/guess/Desktop/autodeploy/examples/demo1/data_science/tracker_workflow1:/mlflow
+    ports: 8006:8001
+  tracker_workflow2:
+    image: tracker_workflow2
+    container_name: tracker_workflow2_20191216113319
+    networks: network_workflow2
+    volumes: /home/guess/Desktop/autodeploy/examples/demo1/data_science/tracker_workflow2:/mlflow
+    ports: 8007:8002
+networks:
+- network_workflow1
+- network_workflow2

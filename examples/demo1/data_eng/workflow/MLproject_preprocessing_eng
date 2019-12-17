@@ -1,0 +1,4 @@
+name: workflow3_preprocessing_eng
+entry_points:
+  main:
+    command: python preprocessing.py
