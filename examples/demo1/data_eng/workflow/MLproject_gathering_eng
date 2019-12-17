@@ -1,0 +1,4 @@
+name: workflow3_gathering_eng
+entry_points:
+  main:
+    command: python gathering.py
