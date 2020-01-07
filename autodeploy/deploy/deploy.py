@@ -9,6 +9,7 @@ import docker
 import time
 import requests
 import json
+import datetime
 from autodeploy import tools
 
 from textwrap import dedent
@@ -48,7 +49,7 @@ class Deploy:
         self.api_container_object = None
         self.predictor_repr = None
         self.input_df = None
-        self.pred_df = None
+        self.input_pred_df = None
         # self.predictor_port = predictor_port
 
     def pipeline(self):
@@ -195,7 +196,7 @@ class Deploy:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
 
-    def predict(self, input_df, port=5001, to_save=False, path_pred=None):
+    def predict(self, input_df, port=5001):
         """
         Use the API to predict with a given input .
 
@@ -232,12 +233,20 @@ class Deploy:
             #                        columns=self.input_to_predict['columns'])
             input_df['pred'] = preds
 
-            self.pred_df = input_df
+            self.input_pred_df = input_df
 
-            if to_save:
-                self.save_prediction(path_pred)
+            # if to_save:
+            #     self.save_prediction
+            # self.save_prediction(self.workflower.ad_checker_dir)
 
-            return self.pred_df
+            id_date = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            input_pred_filename = f'input_predictions_{id_date}.csv'
+            pred_path = os.path.join(self.workflower.ad_checker_dir,
+                                     input_pred_filename)
+            self.input_pred_df.to_csv(pred_path, index=False)
+            logging.info(f'Input and predictions were saved at: {self.workflower.ad_checker_dir}')
+
+            return self.input_pred_df
 
         except requests.exceptions.HTTPError as e:
             logging.error(f"{e}")
@@ -254,8 +263,8 @@ class Deploy:
         """
 
         path_pred = os.path.join(path_pred, 'predictions.csv')
-        self.pred_df.to_csv(path_pred, index=False)
+        self.input_pred_df.to_csv(path_pred, index=False)
         logging.info(f'Input and predictions were saved at: {path_pred}')
 
-        # self.input_pred.to_csv(path_pred,
+        # self.input_pred_filename.to_csv(path_pred,
         #                        mode='a', index=False, header=False)

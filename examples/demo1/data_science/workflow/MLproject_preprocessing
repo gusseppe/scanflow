@@ -1,4 +1,0 @@
-name: workflow1_preprocessing
-entry_points:
-  main:
-    command: python preprocessing.py
