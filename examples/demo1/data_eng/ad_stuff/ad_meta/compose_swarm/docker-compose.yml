@@ -1,0 +1,39 @@
+version: '3'
+services:
+  gathering_eng:
+    image: gathering_eng
+    container_name: gathering_eng_20191223211138
+    networks:
+    - network_workflow3
+    depends_on:
+    - tracker_workflow3
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker_workflow3:8003
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_eng/ad_stuff/ad_meta:/app
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_eng/ad_stuff/ad_meta/tracker_workflow3:/mlflow
+    tty: 'true'
+  preprocessing_eng:
+    image: preprocessing_eng
+    container_name: preprocessing_eng_20191223211138
+    networks:
+    - network_workflow3
+    depends_on:
+    - tracker_workflow3
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker_workflow3:8003
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_eng/ad_stuff/ad_meta:/app
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_eng/ad_stuff/ad_meta/tracker_workflow3:/mlflow
+    tty: 'true'
+  tracker_workflow3:
+    image: tracker_workflow3
+    container_name: tracker_workflow3_20191223211138
+    networks:
+    - network_workflow3
+    volumes:
+    - /home/guess/Desktop/autodeploy/examples/demo1/data_eng/ad_stuff/ad_meta/tracker_workflow3:/mlflow
+    ports:
+    - 8008:8003
+networks:
+  network_workflow3: null

@@ -4,6 +4,7 @@
 
 import logging
 import os
+import datetime
 import pandas as pd
 import docker
 import oyaml as yaml
@@ -18,91 +19,211 @@ logging.getLogger().setLevel(logging.INFO)
 client = docker.from_env()
 
 
-def generate_compose(app_dir, environment, wflow):
-    # workflow_path = os.path.join(app_dir, 'workflow')
-    # list_dir_mlproject = os.listdir(workflow_path)
-    # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-    compose_path = os.path.join(app_dir, 'workflow', 'docker-compose')
-    # if len(mlproject) == 0:
-    mlproject = compose_template(environment, wflow)
-    # with open(compose_path, 'w') as f:
-    #     f.writelines(mlproject)
-    filename = f"{compose_path}_{environment['name']}.yml"
-    with open(filename, 'w') as f:
-        yaml.dump(mlproject, f, default_flow_style=False)
+def generate_compose(folder, workflows, compose_type='repository'):
 
-    logging.info(f'[+] Compose file [{filename}] was created successfully.')
+    compose_dir = None
+
+    if compose_type == 'repository':
+        compose_dic, main_file = compose_template_repo(folder, workflows)
+        compose_dir = os.path.join(folder, 'compose_repository')
+    elif compose_type == 'verbose':
+        compose_dic, main_file = compose_template_verbose(folder, workflows)
+        compose_dir = os.path.join(folder, 'compose_verbose')
+    elif compose_type == 'swarm':
+        compose_dic, main_file = compose_template_swarm(folder, workflows)
+        compose_dir = os.path.join(folder, 'compose_swarm')
+
+    os.makedirs(compose_dir, exist_ok=True)
+    compose_path = os.path.join(compose_dir, 'docker-compose.yml')
+    main_file_path = os.path.join(compose_dir, 'main.py')
+
+    with open(compose_path, 'w') as f:
+        yaml.dump(compose_dic, f, default_flow_style=False)
+
+    with open(main_file_path, 'w') as f:
+        f.writelines(main_file)
+
+    logging.info(f'[+] Compose file [{compose_path}] was created successfully.')
+    logging.info(f'[+] Main file [{main_file_path}] was created successfully.')
     # else:
     #     logging.info(f'[+] MLproject was found.')
     return compose_path
 
 
-def compose_template(environment, wflow):
+def compose_template_repo(folder, workflows):
 
-    mlproject = {'version': 3,
-                 'services': {
-                     environment['name']: {'image': environment['name'],
-                                           'depends_on': 'tracker',
-                                           'MLFLOW_TRACKING_URI': f"http://tracker:{wflow['tracker']['port']}"},
+    compose_dic = {
+        'version': '3',
+        'services': {},
+        'networks': {}
+    }
 
-                     'tracker': {'image': f"tracker_{wflow['name']}",
-                                 'expose': f"{wflow['tracker']['port']}",
-                                 'ports': f"{wflow['tracker']['port']}:{wflow['tracker']['port']}"
-                     }
-                 }
+    id_date = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+    for workflow in workflows:
+        # Executors
+        for node in workflow['workflow']:
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            compose_dic['services'].update({
+                node['name']: {
+                    'image': node['name'],
+                    'container_name': f"{node['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'environment': {
+                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                    },
+                    'volumes': [f"{folder}:/app",
+                                f"{tracker_dir}:/mlflow"],
+                    'tty': 'true'
+
                 }
+            })
 
-    return mlproject
+        # Trackers
+        if 'tracker' in workflow.keys():
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            port = workflow['tracker']['port']
+            compose_dic['services'].update({
+                f"tracker_{workflow['name']}": {
+                    'image': f"tracker_{workflow['name']}",
+                    'container_name': f"tracker_{workflow['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'volumes': [f"{tracker_dir}:/mlflow"],
+                    'ports': [f"{port+5}:{port}"]
 
-
-def generate_mlproject(app_dir, environment, wflow_name='workflow_app'):
-    # workflow_path = os.path.join(app_dir, 'workflow')
-    # list_dir_mlproject = os.listdir(workflow_path)
-    # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-    mlproject_path = os.path.join(app_dir, 'workflow', 'MLproject')
-    # if len(mlproject) == 0:
-    mlproject = mlproject_template(environment, wflow_name)
-    # with open(mlproject_path, 'w') as f:
-    #     f.writelines(mlproject)
-    filename = f"{mlproject_path}_{environment['name']}"
-    with open(filename, 'w') as f:
-        yaml.dump(mlproject, f, default_flow_style=False)
-
-    logging.info(f'[+] MLproject [{filename}] was created successfully.')
-# else:
-#     logging.info(f'[+] MLproject was found.')
-    return mlproject_path
-
-
-def mlproject_template(environment, wflow_name):
-
-    mlproject = {'name': f"{wflow_name}_{environment['name']}",
-                 'entry_points': {
-                     'main': {'command': f"python {environment['file']}"}
-                 }
                 }
+            })
 
-    return mlproject
+        # networks
+        net_name = f"network_{workflow['name']}"
+        compose_dic['networks'].update({net_name: None})
 
-# def mlproject_template(workflow, name='workflow'):
-#
-#     mlproject = {'name': name,
-#                  'entry_points': {
-#                      wflow['name']: {'command': wflow['file']} for wflow in workflow
-#                  }
-#                 }
-#
-#     return mlproject
+    main_file = generate_main_file(folder, id_date)
+
+    return compose_dic, main_file
 
 
-def generate_dockerfile(app_dir, environment):
-    # if app_type == 'single':
-    # list_dir_docker = os.listdir(app_dir)
-    # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
-    filename = f"Dockerfile_{environment['name']}"
-    dockerfile_path = os.path.join(app_dir, 'workflow', filename)
+def compose_template_verbose(folder, workflows):
+
+    compose_dic = {
+        'version': '3',
+        'services': {},
+        'networks': {}
+    }
+
+    id_date = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+    for workflow in workflows:
+        # Executors
+        for node in workflow['workflow']:
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            compose_dic['services'].update({
+                node['name']: {
+                    'image': node['name'],
+                    'container_name': f"{node['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'environment': {
+                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                    },
+                    'volumes': [f"{folder}:/app",
+                                f"{tracker_dir}:/mlflow"],
+                    'tty': 'true'
+
+                }
+            })
+
+        # Trackers
+        if 'tracker' in workflow.keys():
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            port = workflow['tracker']['port']
+            compose_dic['services'].update({
+                f"tracker_{workflow['name']}": {
+                    'image': f"tracker_{workflow['name']}",
+                    'container_name': f"tracker_{workflow['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'volumes': [f"{tracker_dir}:/mlflow"],
+                    'ports': [f"{port+5}:{port}"]
+
+                }
+            })
+
+        # networks
+        net_name = f"network_{workflow['name']}"
+        compose_dic['networks'].update({net_name: None})
+
+    main_file = generate_main_file(folder, id_date)
+
+    return compose_dic, main_file
+
+
+def compose_template_swarm(folder, workflows):
+
+    compose_dic = {
+        'version': '3',
+        'services': {},
+        'networks': {}
+    }
+
+    id_date = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+
+    for workflow in workflows:
+        # Executors
+        for node in workflow['workflow']:
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            compose_dic['services'].update({
+                node['name']: {
+                    'image': node['name'],
+                    'container_name': f"{node['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'environment': {
+                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                    },
+                    'volumes': [f"{folder}:/app",
+                                f"{tracker_dir}:/mlflow"],
+                    'tty': 'true'
+
+                }
+            })
+
+        # Trackers
+        if 'tracker' in workflow.keys():
+            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            port = workflow['tracker']['port']
+            compose_dic['services'].update({
+                f"tracker_{workflow['name']}": {
+                    'image': f"tracker_{workflow['name']}",
+                    'container_name': f"tracker_{workflow['name']}_{id_date}",
+                    'networks': [f"network_{workflow['name']}"],
+                    'volumes': [f"{tracker_dir}:/mlflow"],
+                    'ports': [f"{port+5}:{port}"]
+
+                }
+            })
+
+        # networks
+        net_name = f"network_{workflow['name']}"
+        compose_dic['networks'].update({net_name: None})
+
+    main_file = generate_main_file(folder, id_date)
+
+    return compose_dic, main_file
+
+
+def generate_dockerfile(folder, dock_type='executor', executor=None, port=None):
     # if len(dockerfile) == 0:
-    dockerfile = dockerfile_template(environment)
+    dockerfile = None
+    filename = ''
+    if dock_type == 'executor':
+        dockerfile = dockerfile_template_executor(executor)
+        filename = f"Dockerfile_{executor['name']}"
+    elif dock_type == 'tracker':
+        dockerfile = dockerfile_template_tracker(port)
+        filename = f"Dockerfile_tracker_{executor['name']}"
+
+    dockerfile_path = os.path.join(folder, filename)
     with open(dockerfile_path, 'w') as f:
         f.writelines(dockerfile)
     logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
@@ -114,55 +235,21 @@ def generate_dockerfile(app_dir, environment):
     # return None
 
 
-def dockerfile_template(environment):
+def dockerfile_template_executor(executor):
     # if app_type == 'single':
     template = dedent(f'''
                 FROM continuumio/miniconda3
 
                 RUN mkdir /app
-                ADD {environment['requirements']} /app
+                ADD {executor['requirements']} /app
                 WORKDIR /app
-                RUN pip install -r {environment['requirements']}
+                RUN pip install -r {executor['requirements']}
 
     ''')
     return template
-# def dockerfile_template(environment):
-#     # if app_type == 'single':
-#     template = dedent(f'''
-#                 FROM continuumio/miniconda3
-#
-#                 RUN mkdir /app
-#                 RUN mkdir -p /app/container
-#                 ADD {environment['requirements']} /app/container
-#                 ADD {environment['file']} /app/container
-#                 ADD MLproject_{environment['name']} /app/container/MLproject
-#                 WORKDIR /app
-#                 RUN pip install -r {environment['requirements']}
-#
-#     ''')
-#     return template
 
 
-def generate_tracker(app_dir, port, name):
-    # if app_type == 'single':
-    # list_dir_docker = os.listdir(app_dir)
-    # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
-    filename = f'Dockerfile_tracker_{name}'
-    dockerfile_path = os.path.join(app_dir, 'workflow', filename)
-    dockerfile = dockerfile_tracker(port)
-
-    with open(dockerfile_path, 'w') as f:
-        f.writelines(dockerfile)
-    logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
-    # else:
-    #     logging.info(f'[+] Dockerfile was found.')
-
-    return dockerfile_path
-
-    # return None
-
-
-def dockerfile_tracker(port=8001):
+def dockerfile_template_tracker(port=8001):
     # if app_type == 'single':
     template = dedent(f'''
                 FROM continuumio/miniconda3
@@ -188,6 +275,56 @@ def dockerfile_tracker(port=8001):
                 
     ''')
     return template
+
+
+def generate_main_file(app_dir, id_date):
+
+    main_file = dedent(f"""
+    import os
+    import sys
+
+    path = '/home/guess/Desktop/autodeploy'
+    sys.path.append(path) 
+
+    from autodeploy.setup import setup
+    from autodeploy.run import run
+
+    # App folder
+    app_dir = '{app_dir}'
+
+    # Workflows
+    workflow1 = [
+        {{'name': 'gathering_{id_date}', 'file': 'gathering.py', 
+                'env': 'gathering'}},
+
+        {{'name': 'preprocessing_{id_date}', 'file': 'preprocessing.py', 
+                'env': 'preprocessing'}}, 
+
+    ]
+    workflow2 = [
+        {{'name': 'modeling_{id_date}', 'file': 'modeling.py', 
+                'env': 'modeling'}}, 
+
+
+    ]
+    workflows = [
+        {{'name': 'workflow1', 'workflow': workflow1, 'tracker': {{'port': 8001}}}},
+        {{'name': 'workflow2', 'workflow': workflow2, 'tracker': {{'port': 8002}}}}
+
+    ]
+
+    workflow_datascience = setup.Setup(app_dir, workflows)
+
+
+    # Read the platform
+    runner = run.Run(workflow_datascience)
+
+    # Run the workflow
+    runner.run_workflows()
+
+    """)
+
+    return main_file
 
 
 def create_registry(name='autodeploy_registry'):
@@ -235,7 +372,7 @@ def create_registry(name='autodeploy_registry'):
         logging.error(f"Registry creation failed.")
 
 
-def build_image(name, app_dir, dockerfile_path):
+def build_image(name, app_dir, dockerfile_path, node_type='executor', port=None):
 
     image_from_repo = None
 
@@ -255,13 +392,15 @@ def build_image(name, app_dir, dockerfile_path):
             logging.info(f'[+] Image [{name}] was built successfully.')
             # self.env_image = image[0]
             # environments.append({name: {'image': image[0]}})
-            return {'name': name, 'image': image[0]}
+            return {'name': name, 'image': image[0],
+                    'type': node_type, 'status': 0, 'port': port} # 0:not running
 
         else:
             logging.warning(f'[+] Image [{name}] already exists.')
             logging.info(f'[+] Image [{name}] was loaded successfully.')
 
-            return {'name': name, 'image': image_from_repo}
+            return {'name': name, 'image': image_from_repo,
+                    'type': node_type, 'status': 0, 'port': port}
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
@@ -419,3 +558,77 @@ def generate_data(path, file_system='local', **args):
         logging.info(f'Dataset was generated successfully and saved in hdfs://{path} ')
 
 
+def generate_mlproject(folder, environment, wflow_name='workflow_app'):
+    # workflow_path = os.path.join(folder, 'workflow')
+    # list_dir_mlproject = os.listdir(workflow_path)
+    # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
+    mlproject_path = os.path.join(folder, 'workflow', 'MLproject')
+    # if len(mlproject) == 0:
+    mlproject = mlproject_template(environment, wflow_name)
+    # with open(mlproject_path, 'w') as f:
+    #     f.writelines(mlproject)
+    filename = f"{mlproject_path}_{environment['name']}"
+    with open(filename, 'w') as f:
+        yaml.dump(mlproject, f, default_flow_style=False)
+
+    logging.info(f'[+] MLproject [{filename}] was created successfully.')
+    # else:
+    #     logging.info(f'[+] MLproject was found.')
+    return mlproject_path
+
+
+def mlproject_template(environment, wflow_name):
+
+    mlproject = {'name': f"{wflow_name}_{environment['name']}",
+                 'entry_points': {
+                     'main': {'command': f"python {environment['file']}"}
+                 }
+                 }
+
+    return mlproject
+
+# def dockerfile_template(environment):
+#     # if app_type == 'single':
+#     template = dedent(f'''
+#                 FROM continuumio/miniconda3
+#
+#                 RUN mkdir /app
+#                 RUN mkdir -p /app/container
+#                 ADD {environment['requirements']} /app/container
+#                 ADD {environment['file']} /app/container
+#                 ADD MLproject_{environment['name']} /app/container/MLproject
+#                 WORKDIR /app
+#                 RUN pip install -r {environment['requirements']}
+#
+#     ''')
+#     return template
+
+
+# def mlproject_template(workflow, name='workflow'):
+#
+#     mlproject = {'name': name,
+#                  'entry_points': {
+#                      wflow['name']: {'command': wflow['file']} for wflow in workflow
+#                  }
+#                 }
+#
+#     return mlproject
+
+# def generate_tracker(folder, port, name):
+#     # if app_type == 'single':
+#     # list_dir_docker = os.listdir(folder)
+#     # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
+#     filename = f'Dockerfile_tracker_{name}'
+#     # dockerfile_path = os.path.join(folder, 'workflow', filename)
+#     dockerfile_path = os.path.join(folder, filename)
+#     dockerfile = dockerfile_tracker(port)
+#
+#     with open(dockerfile_path, 'w') as f:
+#         f.writelines(dockerfile)
+#     logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
+#     # else:
+#     #     logging.info(f'[+] Dockerfile was found.')
+#
+#     return dockerfile_path
+
+# return None
