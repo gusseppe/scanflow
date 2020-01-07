@@ -23,7 +23,8 @@ Scalable library for model management focus on degradation perfomance
 Features
 --------
 
-* TODO
+.. image:: https://github.com/gusseppe/autodeploy/blob/master/autodeploy6.png
+
 
 Credits
 -------
