@@ -1,9 +1,14 @@
 import pandas as pd
+import os
 import numpy as np
+import logging
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 from scipy.stats import ks_2samp
+from datetime import datetime
+from sklearn.externals import joblib
+from sklearn.preprocessing import MinMaxScaler
 
 
 def add_noise(df, mu=0, sigma=0.1):
@@ -12,147 +17,66 @@ def add_noise(df, mu=0, sigma=0.1):
     return df_noise
 
 
-def test_corr(x1, x2):
-    """
-      Test correlation matrix similarity using
-      signed distances.
+def join_predictions(input_pred_files):
+    df_list = list()
+    for file in input_pred_files:
+        df_list.append(pd.read_csv(file))
 
-      Parameters
-      ----------
-      x1 : DataFrame.
-          Numerical features of the original data.
-      x2 : DataFrame.
-          Numerical features of the new data.
+    df_total = pd.concat(df_list, ignore_index=True)
 
-      Returns
-      -------
-      corr_df : DataFrame
-          Dataframe with the distances.
-      explain_df : DataFrame
-          Dataframe with the explanations.
-    """
-
-    def signed_distance(x1, x2):
-        df_t = (x1.corr().abs() - x2.corr().abs()).abs()
-        df_t = df_t.where((x1.corr() * x2.corr()) > 0, -df_t)
-
-        return df_t
-
-    def explain_distance(df):
-        conditions = [
-            (df > 0) & (df <= 0.1),
-            (df > 0.1) & (df <= 0.2),
-            (df > 0.2),
-            (df < 0)]
-
-        choices = ['good', 'medium', 'bad', 'diff direction']
-        df = np.select(conditions, choices, default='diagonal')
-
-        return pd.DataFrame(df)
-
-    corr_df = signed_distance(x1, x2)
-    explain_df = explain_distance(corr_df)
-
-    return corr_df, explain_df
+    return df_total
 
 
-def test_ks(x1, x2):
-    """
-      Test Kolmogorov-Smirnov.
-      The null hypothesis (H0) is that these two variables
-      are drawn from same continuous distribution.
+def format_predictions(input_pred_files):
+    df_list = list()
+    for file in input_pred_files:
+        date_file = os.path.basename(file).replace('input_predictions_', '').replace('.csv', '')
+        date_file = datetime.strptime(date_file, '%Y_%m_%d_%H_%M_%S')
+        data = pd.read_csv(file)
+        df_dict = {'date': date_file,
+                   'path': file,
+                   'data': data}
+        df_list.append(df_dict)
 
-      Parameters
-      ----------
-      x1 : DataFrame.
-          Numerical features of the original data.
-      x2 : DataFrame.
-          Numerical features of the new data.
-
-      Returns
-      -------
-      ks_df : DataFrame
-          Dataframe with the p-values and explanations.
-    """
-
-    def explainer_ks(p_value):
-        explain = ''
-        # interpretation
-        alpha = 0.1
-        if p_value < alpha:
-            explain = 'Different'  # reject H0
-        elif (p_value >= alpha) and (p_value <= 0.4):
-            explain = 'Slightly different'  # fail to reject H0
-        else:
-            explain = 'Comparable'  # fail to reject H0
-        return explain
-
-    p_value_dict = {}
-    for col in x1:
-        stat, p_value = ks_2samp(x1[col], x2[col])
-        p_value_dict[col] = [p_value, explainer_ks(p_value)]
-
-    ks_df = pd.DataFrame(p_value_dict, index=['p_value', 'explain'])
-
-    return ks_df
+    return df_list
 
 
-def overall_test(x1, x2, test=['ks'], cols=None, verbose=False):
-    print(f'########## Comparing two numerical dataframes ##########')
+def get_input_predictions(checker_dir, periods=1):
+    # self.predict()
+    try:
+        input_pred_files = sorted(os.listdir(checker_dir),
+                                  key=lambda x: os.stat(os.path.join(checker_dir, x)).st_mtime,
+                                  reverse=True)
+        input_pred_files = [os.path.join(checker_dir, file) for file in input_pred_files]
 
-    if 'ks' in test:
-        print()
-        print(f'######## Kolmogorov-Smirnov test ########')
-        n_cols = 3
-        if cols is not None:
-            df_ks = test_ks(x1[cols], x2[cols])
-        else:
-            df_ks = test_ks(x1[x1.columns[:n_cols]], x2[x2.columns[:n_cols]])
-
-        if verbose:
-            #       x1.plot(kind='density', title='Old matrix')
-            fig = plt.figure(figsize=[7, 7])
-            ax1 = fig.add_subplot(211)
-            ax2 = fig.add_subplot(212)
-            plt.subplots_adjust(hspace=0.3)
-            if cols is not None:
-                for col in cols:
-                    _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
-                for col in cols:
-                    _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
+        if len(input_pred_files) != 0:
+            if periods > 0:
+                return format_predictions(input_pred_files[:periods])
+            elif periods == -1:
+                return format_predictions(input_pred_files)
             else:
-                for col in x1.columns[:n_cols]:
-                    _ = sns.kdeplot(x1[col], ax=ax1).set_title("Old matrix")
-                for col in x2.columns[:n_cols]:
-                    _ = sns.kdeplot(x2[col], ax=ax2).set_title("New matrix")
+                return None
+        else:
+            return None
 
-            #       _ = sns.distplot(x1).set_title("Old matrix")
-            #       x2.plot(kind='density', title='New matrix')
-            plt.show()
+    except OSError as e:
+        logging.error(f"{e}")
+        logging.error(f"Path does not exist.")
 
-        print(df_ks)
 
-    if 'corr' in test:
-        print()
-        print(f'######## Correlation matrix similarity test ########')
-        corr_df, explain_df = test_corr(x1[x1.columns[:n_cols]],
-                                        x2[x2.columns[:n_cols]])
-        if verbose:
-            fig = plt.figure(figsize=[7, 7])
-            ax1 = fig.add_subplot(211)
-            ax2 = fig.add_subplot(212)
+def scale(scaler_dir, df):
+    scaler_path = os.path.join(scaler_dir, 'scaler.save')
 
-            plt.subplots_adjust(hspace=0.3)
-            _ = sns.heatmap(x1[x1.columns[:n_cols]].corr(), vmin=-1, vmax=1,
-                            annot=True, ax=ax1).set_title("Old matrix")
-            pp1 = sns.pairplot(x1, height=1.5)
-            pp1.fig.suptitle("Old matrix", y=1.02)
+    if os.path.isfile(scaler_path):
+        scaler = joblib.load(scaler_path)
+        X = pd.DataFrame(scaler.transform(df),
+                         columns=df.columns,
+                         index=df.index)
+    else:
+        scaler = MinMaxScaler()
+        X = pd.DataFrame(scaler.fit_transform(df),
+                         columns=df.columns,
+                         index=df.index)
+        joblib.dump(scaler, scaler_path)
 
-            _ = sns.heatmap(x2[x2.columns[:n_cols]].corr(), vmin=-1, vmax=1,
-                            annot=True, ax=ax2).set_title("New matrix")
-            pp2 = sns.pairplot(x2, height=1.5)
-            pp2.fig.suptitle("New matrix", y=1.02)
-            plt.show()
-            print(corr_df)
-
-        print(explain_df)
+    return X

@@ -37,7 +37,7 @@ class Setup:
             setup = Setup(app_dir='/home/user/Dockerfile')
 
         Parameters:
-            app_dir (str): Path to a Dockerfile, single mode.
+            app_dir (str): Path to the application.
             master_file (str): Path to a Dockerfile, cluster mode.
             worker_file (str): Path to a Dockerfile, cluster mode.
             n_workers (int): if app_type=='cluster' then it means the
@@ -47,10 +47,21 @@ class Setup:
         """
         # self.app_type = app_type
         self.app_dir = app_dir
-        self.ad_stuff_dir = os.path.join(app_dir, 'ad_stuff')
-        self.ad_meta_dir = os.path.join(self.ad_stuff_dir, 'ad_meta')
-        self.ad_tracker_dir = os.path.join(self.ad_stuff_dir, 'ad_tracker')
-        self.ad_checker_dir = os.path.join(self.ad_stuff_dir, 'ad_checker')
+        self.ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
+        self.ad_meta_dir = os.path.join(self.ad_stuff_dir, 'ad-meta')
+        self.ad_tracker_dir = os.path.join(self.ad_stuff_dir, 'ad-tracker')
+        self.ad_checker_dir = os.path.join(self.ad_stuff_dir, 'ad-checker')
+        self.ad_checker_pred_dir = os.path.join(self.ad_checker_dir, 'predictions')
+        self.ad_checker_model_dir = os.path.join(self.ad_checker_dir, 'model')
+        self.ad_checker_scaler_dir = os.path.join(self.ad_checker_dir, 'scaler')
+        self.ad_paths = {'app_dir': self.app_dir,
+                         'ad_stuff_dir': self.ad_stuff_dir,
+                         'ad_meta_dir': self.ad_meta_dir,
+                         'ad_tracker_dir': self.ad_tracker_dir,
+                         'ad_checker_dir': self.ad_checker_dir,
+                         'ad_checker_pred_dir': self.ad_checker_pred_dir,
+                         'ad_checker_model_dir': self.ad_checker_model_dir,
+                         'ad_checker_scaler_dir': self.ad_checker_scaler_dir}
 
         self.workflows_user = workflows
         # self.master_file = master_file
@@ -76,15 +87,18 @@ class Setup:
             image (object): Docker image.
         """
 
-
         # Create autodeploy directories for stuff
+
         os.makedirs(self.ad_meta_dir, exist_ok=True)
         os.makedirs(self.ad_tracker_dir, exist_ok=True)
         os.makedirs(self.ad_checker_dir, exist_ok=True)
+        os.makedirs(self.ad_checker_pred_dir, exist_ok=True)
+        os.makedirs(self.ad_checker_model_dir, exist_ok=True)
+        os.makedirs(self.ad_checker_scaler_dir, exist_ok=True)
 
-        compose_types = ['repository', 'verbose', 'swarm']
+        compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
         for c_type in compose_types:
-            compose_path = tools.generate_compose(self.ad_meta_dir,
+            compose_path = tools.generate_compose(self.ad_paths,
                                                   self.workflows_user,
                                                   compose_type=c_type)
 
@@ -127,7 +141,7 @@ class Setup:
 
             # Create Dockerfile if needed
             if 'requirements' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose_verbose')
+                meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose-verbose')
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
                 # dockerfile_path = tools.generate_dockerfile(meta_compose_dir, environment=wflow)
@@ -139,7 +153,7 @@ class Setup:
                 environments.append(metadata)
 
             elif 'dockerfile' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose_verbose')
+                meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose-verbose')
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
                 # TODO: copy provided dockerfile on compose_verbose
@@ -164,13 +178,13 @@ class Setup:
 
         if 'tracker' in workflow.keys():
             port = workflow['tracker']['port']
-            meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose_verbose')
+            meta_compose_dir = os.path.join(self.ad_meta_dir, 'compose-verbose')
             # os.makedirs(meta_compose_dir, exist_ok=True)
             dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                         executor=workflow,
                                                         dock_type='tracker',
                                                         port=port)
-            tracker_image_name = f"tracker_{workflow['name']}"
+            tracker_image_name = f"tracker-{workflow['name']}"
             # tracker_image = tools.build_image(tracker_image_name, self.app_dir, dockerfile_path)
             metadata = tools.build_image(tracker_image_name, self.app_dir,
                                          dockerfile_path, 'tracker', port)
@@ -238,12 +252,12 @@ class Setup:
                 host_path = self.app_dir
                 container_path = '/app'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_tracker_dir, f"tracker_{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.ad_tracker_dir, f"tracker-{workflow['name']}" )
                 workflow_tracker_dir_ctn = '/mlflow'
                 volume = {host_path: {'bind': container_path, 'mode': 'rw'},
                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
 
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"}
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
                 env_container = tools.start_image(image=env_image_name,
                                                   name=env_tag_name,
                                                   network=net_name,
@@ -260,15 +274,15 @@ class Setup:
             containers.append({'name': env_image_name, 'ctn': env_container})
 
         if 'tracker' in workflow.keys():
-            workflow_tracker_dir = os.path.join(self.ad_tracker_dir, f"tracker_{workflow['name']}" )
+            workflow_tracker_dir = os.path.join(self.ad_tracker_dir, f"tracker-{workflow['name']}" )
             os.makedirs(workflow_tracker_dir, exist_ok=True)
 
             # host_path = self.app_dir
             container_path = '/mlflow'
             volume = {workflow_tracker_dir: {'bind': container_path, 'mode': 'rw'}}
 
-            tracker_image_name = f"tracker_{workflow['name']}"
-            tracker_tag_name = f"tracker_{workflow['name']}"
+            tracker_image_name = f"tracker-{workflow['name']}"
+            tracker_tag_name = f"tracker-{workflow['name']}"
             logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
             # try:
             port = workflow['tracker']['port']
@@ -316,7 +330,7 @@ class Setup:
 
         if tracker:
             if 'tracker' in workflow.keys():
-                tracker_image_name = f"tracker_{workflow['name']}"
+                tracker_image_name = f"tracker-{workflow['name']}"
                 try:
                     container_from_env = client.containers.get(tracker_image_name)
                     container_from_env.stop()
@@ -374,6 +388,7 @@ class Setup:
                 if 'tracker' not in container['name']:
                     self.save_env(container, registry_name)
 
+
     def save_env(self, container, registry_name):
         """
         Run an image that yields a environment.
@@ -398,12 +413,4 @@ class Setup:
         except docker.api.client.DockerException as e:
             logging.error(f"{e}")
             logging.error(f"[-] Saving [{container['name']}] failed.")
-
-    def to_compose(self, directory=None, build_dockerfiles=False):
-        if build_dockerfiles:
-            compose_path = tools.generate_compose(self.app_dir,
-                                                  self.workflows_user,
-                                                  directory=directory)
-            return compose_path
-
 

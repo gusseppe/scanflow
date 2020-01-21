@@ -239,7 +239,7 @@ class Deploy:
             #     self.save_prediction
             # self.save_prediction(self.workflower.ad_checker_dir)
 
-            id_date = datetime.datetime.now().strftime('%Y%m%d%H%M%S')
+            id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
             input_pred_filename = f'input_predictions_{id_date}.csv'
             pred_path = os.path.join(self.workflower.ad_checker_dir,
                                      input_pred_filename)
