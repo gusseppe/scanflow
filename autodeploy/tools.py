@@ -19,19 +19,22 @@ logging.getLogger().setLevel(logging.INFO)
 client = docker.from_env()
 
 
-def generate_compose(folder, workflows, compose_type='repository'):
+def generate_compose(ad_paths, workflows, compose_type='repository'):
 
     compose_dir = None
 
     if compose_type == 'repository':
-        compose_dic, main_file = compose_template_repo(folder, workflows)
-        compose_dir = os.path.join(folder, 'compose_repository')
+        compose_dic, main_file = compose_template_repo(ad_paths, workflows)
+        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-repository')
     elif compose_type == 'verbose':
-        compose_dic, main_file = compose_template_verbose(folder, workflows)
-        compose_dir = os.path.join(folder, 'compose_verbose')
+        compose_dic, main_file = compose_template_verbose(ad_paths, workflows)
+        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-verbose')
     elif compose_type == 'swarm':
-        compose_dic, main_file = compose_template_swarm(folder, workflows)
-        compose_dir = os.path.join(folder, 'compose_swarm')
+        compose_dic, main_file = compose_template_swarm(ad_paths, workflows)
+        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-swarm')
+    else:
+        compose_dic, main_file = compose_template_swarm(ad_paths, workflows)
+        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-kubernetes')
 
     os.makedirs(compose_dir, exist_ok=True)
     compose_path = os.path.join(compose_dir, 'docker-compose.yml')
@@ -50,7 +53,7 @@ def generate_compose(folder, workflows, compose_type='repository'):
     return compose_path
 
 
-def compose_template_repo(folder, workflows):
+def compose_template_repo(ad_paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -63,17 +66,17 @@ def compose_template_repo(folder, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['workflow']:
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
-                    'container_name': f"{node['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
-                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'container_name': f"{node['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
+                    'depends_on': [f"tracker-{workflow['name']}"],
                     'environment': {
-                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                        'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{folder}:/app",
+                    'volumes': [f"{ad_paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
                     'tty': 'true'
 
@@ -82,13 +85,13 @@ def compose_template_repo(folder, workflows):
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
-                f"tracker_{workflow['name']}": {
-                    'image': f"tracker_{workflow['name']}",
-                    'container_name': f"tracker_{workflow['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
+                f"tracker-{workflow['name']}": {
+                    'image': f"tracker-{workflow['name']}",
+                    'container_name': f"tracker-{workflow['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
                     'volumes': [f"{tracker_dir}:/mlflow"],
                     'ports': [f"{port+5}:{port}"]
 
@@ -99,12 +102,12 @@ def compose_template_repo(folder, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(folder, id_date)
+    main_file = generate_main_file(ad_paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
 
-def compose_template_verbose(folder, workflows):
+def compose_template_verbose(ad_paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -117,32 +120,32 @@ def compose_template_verbose(folder, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['workflow']:
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
-                    'container_name': f"{node['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
-                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'container_name': f"{node['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
+                    'depends_on': [f"tracker-{workflow['name']}"],
                     'environment': {
-                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                        'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{folder}:/app",
+                    'volumes': [f"{ad_paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
-                    'tty': 'true'
+                    # 'tty': 'true'
 
                 }
             })
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
-                f"tracker_{workflow['name']}": {
-                    'image': f"tracker_{workflow['name']}",
-                    'container_name': f"tracker_{workflow['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
+                f"tracker-{workflow['name']}": {
+                    'image': f"tracker-{workflow['name']}",
+                    'container_name': f"tracker-{workflow['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
                     'volumes': [f"{tracker_dir}:/mlflow"],
                     'ports': [f"{port+5}:{port}"]
 
@@ -153,12 +156,12 @@ def compose_template_verbose(folder, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(folder, id_date)
+    main_file = generate_main_file(ad_paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
 
-def compose_template_swarm(folder, workflows):
+def compose_template_swarm(ad_paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -171,32 +174,32 @@ def compose_template_swarm(folder, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['workflow']:
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
-                    'container_name': f"{node['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
-                    'depends_on': [f"tracker_{workflow['name']}"],
+                    'container_name': f"{node['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
+                    'depends_on': [f"tracker-{workflow['name']}"],
                     'environment': {
-                        'MLFLOW_TRACKING_URI': f"http://tracker_{workflow['name']}:{workflow['tracker']['port']}"
+                        'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{folder}:/app",
+                    'volumes': [f"{ad_paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
-                    'tty': 'true'
+                    # 'tty': 'true'
 
                 }
             })
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(folder, f"tracker_{workflow['name']}")
+            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
-                f"tracker_{workflow['name']}": {
-                    'image': f"tracker_{workflow['name']}",
-                    'container_name': f"tracker_{workflow['name']}_{id_date}",
-                    'networks': [f"network_{workflow['name']}"],
+                f"tracker-{workflow['name']}": {
+                    'image': f"tracker-{workflow['name']}",
+                    'container_name': f"tracker-{workflow['name']}-{id_date}",
+                    'networks': [f"network-{workflow['name']}"],
                     'volumes': [f"{tracker_dir}:/mlflow"],
                     'ports': [f"{port+5}:{port}"]
 
@@ -207,7 +210,7 @@ def compose_template_swarm(folder, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(folder, id_date)
+    main_file = generate_main_file(ad_paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
@@ -294,15 +297,15 @@ def generate_main_file(app_dir, id_date):
 
     # Workflows
     workflow1 = [
-        {{'name': 'gathering_{id_date}', 'file': 'gathering.py', 
+        {{'name': 'gathering-{id_date}', 'file': 'gathering.py', 
                 'env': 'gathering'}},
 
-        {{'name': 'preprocessing_{id_date}', 'file': 'preprocessing.py', 
+        {{'name': 'preprocessing-{id_date}', 'file': 'preprocessing.py', 
                 'env': 'preprocessing'}}, 
 
     ]
     workflow2 = [
-        {{'name': 'modeling_{id_date}', 'file': 'modeling.py', 
+        {{'name': 'modeling-{id_date}', 'file': 'modeling.py', 
                 'env': 'modeling'}}, 
 
 
