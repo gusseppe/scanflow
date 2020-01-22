@@ -1,1 +1,0 @@
-docker run -p 5002:8080 "autonomicbsc/workflow_api"

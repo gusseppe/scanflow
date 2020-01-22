@@ -2,7 +2,7 @@ version: '3'
 services:
   gathering_eng:
     image: gathering_eng
-    container_name: gathering_eng-20200121115520
+    container_name: gathering_eng-20200122122623
     networks:
     - network-workflow3
     depends_on:
@@ -15,7 +15,7 @@ services:
     tty: 'true'
   preprocessing_eng:
     image: preprocessing_eng
-    container_name: preprocessing_eng-20200121115520
+    container_name: preprocessing_eng-20200122122623
     networks:
     - network-workflow3
     depends_on:
@@ -28,7 +28,7 @@ services:
     tty: 'true'
   tracker-workflow3:
     image: tracker-workflow3
-    container_name: tracker-workflow3-20200121115520
+    container_name: tracker-workflow3-20200122122623
     networks:
     - network-workflow3
     volumes:

@@ -4,10 +4,11 @@ import numpy as np
 import logging
 import matplotlib.pyplot as plt
 import seaborn as sns
+import joblib
 
 from scipy.stats import ks_2samp
 from datetime import datetime
-from sklearn.externals import joblib
+# from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
 
 
@@ -61,7 +62,7 @@ def get_input_predictions(checker_dir, periods=1):
 
     except OSError as e:
         logging.error(f"{e}")
-        logging.error(f"Path does not exist.")
+        logging.error(f"Path does not exist.", exc_info=True)
 
 
 def scale(scaler_dir, df):

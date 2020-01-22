@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -o configs/ --volumes hostPath
+    kompose.version: 1.15.0 (e3cd4d4)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: tracker-workflow1
+  name: tracker-workflow1
+spec:
+  ports:
+  - name: "8006"
+    port: 8006
+    targetPort: 8001
+  selector:
+    io.kompose.service: tracker-workflow1
+status:
+  loadBalancer: {}

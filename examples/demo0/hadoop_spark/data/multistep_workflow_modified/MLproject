@@ -1,8 +1,0 @@
-name: multistep_example
-
-entry_points:
-  main:
-    parameters:
-      source: path
-    command: "python data_gathering.py --source {source}"
-

@@ -21,7 +21,7 @@ client = docker.from_env()
 
 
 class Run:
-    def __init__(self, workflower):
+    def __init__(self, workflower, verbose=True):
         """
         Example:
             deployer = Run(platform)
@@ -42,6 +42,9 @@ class Run:
         self.workflower = workflower
         self.workflows_user = workflower.workflows_user
         self.app_dir = workflower.app_dir
+        self.verbose = verbose
+        tools.check_verbosity(verbose)
+
         self.logs_workflow = None
         self.logs_build_image = None
         self.logs_run_ctn = None
@@ -50,6 +53,7 @@ class Run:
         self.api_container_object = None
         self.workflows = list()
         # self.predictor_port = predictor_port
+
 
     def pipeline(self):
         self.run_workflow()
@@ -79,7 +83,7 @@ class Run:
         Run a workflow that consists of several python files.
 
         Parameters:
-            workflow (str): Container of a deployed environment.
+            workflow (dict): Workflow of executions
         Returns:
             image (object): Docker image.
         """
@@ -92,7 +96,14 @@ class Run:
             try:
                 env_name = wflow['name']
                 env_container = client.containers.get(env_name)
-                result = env_container.exec_run(cmd=f"python {wflow['file']}", workdir='/app/workflow')
+                if 'parameters' in wflow.keys():
+                    cmd = f"python {wflow['file']} {tools.format_parameters(wflow['parameters'])}"
+                    result = env_container.exec_run(cmd=cmd,
+                                                    workdir='/app/workflow')
+                else:
+                    result = env_container.exec_run(cmd=f"python {wflow['file']}",
+                                                    workdir='/app/workflow')
+
                 # result = env_container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
                 logging.info(f"[+] Running ({wflow['file']}). ")
                 logging.info(f"[+] Output:  {result.output.decode('utf-8')} ")
