@@ -1,0 +1,15 @@
+artifact_uri: /mlflow/mlruns/0/cafe0892de2f42deaaa347d75d137930/artifacts
+end_time: 1579717548525
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: cafe0892de2f42deaaa347d75d137930
+run_uuid: cafe0892de2f42deaaa347d75d137930
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1579717548412
+status: 3
+tags: []
+user_id: root

@@ -1,4 +1,0 @@
-name: workflow1_gathering
-entry_points:
-  main:
-    command: python gathering.py

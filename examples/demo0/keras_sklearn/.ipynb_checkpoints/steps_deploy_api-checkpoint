@@ -1,4 +1,0 @@
-mlflow models build-docker -m ./models -n "autonomicbsc/workflow_api"
-docker run -p 5001:8080 "autonomicbsc/workflow_api"
-docker run -p 5002:8080 "autonomicbsc/workflow_api"
-docker run -p 5003:8080 "autonomicbsc/workflow_api"

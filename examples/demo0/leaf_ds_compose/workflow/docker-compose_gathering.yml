@@ -1,5 +1,0 @@
-version: 3
-services:
-  gathering:
-    image: gathering
-    MLFLOW_TRACKING_URI: http://tracker:8001

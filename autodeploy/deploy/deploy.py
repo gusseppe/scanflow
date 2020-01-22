@@ -22,7 +22,7 @@ client = docker.from_env()
 
 
 class Deploy:
-    def __init__(self, workflower):
+    def __init__(self, app_dir, verbose=True):
         """
         Example:
             deployer = Deploy(platform)
@@ -40,8 +40,10 @@ class Deploy:
         #     self.workflow = environment.workflow
         #     self.single_app_dir = environment.single_app_dir
 
-        self.workflower = workflower
-        self.app_dir = workflower.app_dir
+        self.app_dir = app_dir
+        self.ad_paths = tools.get_autodeploy_paths(app_dir)
+        self.verbose = verbose
+        tools.check_verbosity(verbose)
         self.logs_workflow = None
         self.logs_build_image = None
         self.logs_run_ctn = None
@@ -53,26 +55,27 @@ class Deploy:
         # self.predictor_port = predictor_port
 
     def pipeline(self):
-        self.run_workflow()
-        self.deploy()
+        self.build_predictor()
+        self.run_predictor()
 
         return self
 
-    def build_predictor(self, image='app_single_api', name='predictor'):
+    def build_predictor(self, model_path, image='predictor', name='predictor'):
         """
         Deploy a ML model into a Docker container.
 
         Parameters:
+            model_path (str): Name API image.
             image (str): Name API image.
         Returns:
             image (object): Docker container.
         """
-        logging.info(f'[+] Building predictor [{image}] as API. Please wait.')
+        logging.info(f'[++] Building predictor [image:{image}] as API. Please wait.')
         # image = f'{image}_{self.app_type}_api'
         predictor_container_name = image
         logs_build_image = ''
 
-        models_path = os.path.join(self.app_dir, 'workflow', 'models')
+        # model_path = os.path.join(self.app_dir, 'workflow', 'models')
 
         # logging.info(f"[+] Building image: {image}. Please wait... ")
         predictor_from_repo = None
@@ -87,7 +90,7 @@ class Deploy:
         try:
             if predictor_from_repo is None:
 
-                cmd_build = f'mlflow models build-docker -m {models_path} -n {name}'
+                cmd_build = f'mlflow models build-docker -m {model_path} -n {name}'
                 logs_build_image = subprocess.check_output(cmd_build.split())
                 # logging.info(f" Output image: {logs_build_image} ")
                 logging.info(f"[+] Predictor: {name} was built successfully. ")
@@ -98,7 +101,8 @@ class Deploy:
             else:
                 predictor_repr = {'name': name, 'env': predictor_from_repo}
                 self.predictor_repr = predictor_repr
-                logging.warning(f'[+] Predictor: {image} loaded successfully.')
+                logging.warning(f'[+] Image [{image}] already exists.')
+                logging.info(f'[+] Predictor: {image} loaded successfully.')
 
         except docker.api.client.DockerException as e:
             logging.error(f"{e}")
@@ -108,37 +112,24 @@ class Deploy:
         self.logs_build_image = logs_build_image
         # self.logs_run_ctn = logs_run_ctn
 
-    def run_predictor(self, image='app_single_api', name='predictor', port=5001):
+    def run_predictor(self, image='predictor', name='predictor', port=5001):
         """
         Run the API model into a Docker container.
 
         Parameters:
             image (str): Name API image.
-            app_type (str): Type of the app to be deployed.
             port (int): Port of the app to be deployed.
         Returns:
             image (object): Docker container.
         """
             # image = f'{image}_{app_type}_api'
             # image = image_name
-        logging.info(f"[+] Running predictor [{name}].")
+        logging.info(f"[++] Running predictor [{name}].")
 
         env_container = tools.start_image(image=image,
                                           name=name,
                                           port=port)
-        # try:
-        #     container = client.containers.run(image=image,
-        #                                       name=name,
-        #                                       tty=True, detach=True,
-        #                                       ports=ports)
-        #
-        #     logging.info(f"[+] Predictor [{name}] was created successfully. ")
-        # for w in self.workflows:
-        #     if w['name'] == name:
-        #         # w.update({'ctns': containers + tracker_ctn})
-        #         w.update({'ctn': env_container, 'port': port})
         self.predictor_repr.update({'ctn': env_container, 'port': port})
-        # self.workflows[0].update({'ctn': env_container, 'port': port})
 
         logging.info(f"[+] Predictor API at [http://localhost:{port}]. ")
 
@@ -148,21 +139,9 @@ class Deploy:
             Name: {self.predictor_repr['name']},
             Env: {self.predictor_repr['env']},
             Container: {self.predictor_repr['ctn']},
-            API=0.0.0.0:{self.predictor_repr['port']}),
+            URL=0.0.0.0:{self.predictor_repr['port']}),
         """)
         return _repr
-
-    def stop_predictor(self, name='predictor'):
-
-        try:
-            container_from_env = client.containers.get(name)
-            container_from_env.stop()
-            container_from_env.remove()
-            logging.info(f"[+] Predictor: [{name}] was stopped successfully.")
-
-        except docker.api.client.DockerException as e:
-            # logging.error(f"{e}")
-            logging.info(f"[+] Predictor: [{name}] is not running in local.")
 
     # def __repr__(self):
     #     _repr = dedent(f"""
@@ -224,27 +203,27 @@ class Deploy:
             logging.info(f'Predicting from port: {port}')
             logging.info(f'Time elapsed: {end-start}')
 
-            self.input_df = input_df
+            self.input_df = input_df.copy()
             # self.predictions = response_json
 
             # preds = [d['0'] for d in self.predictions]
             preds = [d for d in response_json]
             # df_pred = pd.DataFrame(self.input_to_predict['data'],
             #                        columns=self.input_to_predict['columns'])
-            input_df['pred'] = preds
+            self.input_df['pred'] = preds
 
-            self.input_pred_df = input_df
+            self.input_pred_df = self.input_df
 
             # if to_save:
             #     self.save_prediction
-            # self.save_prediction(self.workflower.ad_checker_dir)
+            # self.save_prediction(self.ad_paths['ad_checker_dir'])
 
             id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
             input_pred_filename = f'input_predictions_{id_date}.csv'
-            pred_path = os.path.join(self.workflower.ad_checker_dir,
+            pred_path = os.path.join(self.ad_paths['ad_checker_dir'],
                                      input_pred_filename)
             self.input_pred_df.to_csv(pred_path, index=False)
-            logging.info(f'Input and predictions were saved at: {self.workflower.ad_checker_dir}')
+            logging.info(f"Input and predictions were saved at: {self.ad_paths['ad_checker_dir']}")
 
             return self.input_pred_df
 
@@ -268,3 +247,15 @@ class Deploy:
 
         # self.input_pred_filename.to_csv(path_pred,
         #                        mode='a', index=False, header=False)
+
+    def stop_predictor(self, name='predictor'):
+
+        try:
+            container_from_env = client.containers.get(name)
+            container_from_env.stop()
+            container_from_env.remove()
+            logging.info(f"[+] Predictor: [{name}] was stopped successfully.")
+
+        except docker.api.client.DockerException as e:
+            # logging.error(f"{e}")
+            logging.info(f"[+] Predictor: [{name}] is not running in local.")

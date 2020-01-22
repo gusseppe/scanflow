@@ -1,4 +1,0 @@
-name: workflow2_modeling
-entry_points:
-  main:
-    command: python modeling.py

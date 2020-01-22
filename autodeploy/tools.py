@@ -372,7 +372,7 @@ def create_registry(name='autodeploy_registry'):
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
-        logging.error(f"Registry creation failed.")
+        logging.error(f"[-] Registry creation failed.", exc_info=True)
 
 
 def build_image(name, app_dir, dockerfile_path, node_type='executor', port=None):
@@ -407,7 +407,7 @@ def build_image(name, app_dir, dockerfile_path, node_type='executor', port=None)
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
-        logging.error(f"[-] Image building failed.")
+        logging.error(f"[-] Image building failed.", exc_info=True)
 
 
 def start_image(image, name, network=None, volume=None, port=None, environment=None):
@@ -478,7 +478,7 @@ def start_image(image, name, network=None, volume=None, port=None, environment=N
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
-        logging.error(f"[-] Starting environment: [{name}] failed.")
+        logging.error(f"[-] Starting environment: [{name}] failed.", exc_info=True)
 
 
 def run_environment(name, network, volume=None, port=None, environment=None):
@@ -519,7 +519,7 @@ def start_network(name):
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
-        logging.error(f"[-] Starting network: [{name}] failed.")
+        logging.error(f"[-] Starting network: [{name}] failed.", exc_info=True)
 
 
 def generate_data(path, file_system='local', **args):
@@ -590,48 +590,39 @@ def mlproject_template(environment, wflow_name):
 
     return mlproject
 
-# def dockerfile_template(environment):
-#     # if app_type == 'single':
-#     template = dedent(f'''
-#                 FROM continuumio/miniconda3
-#
-#                 RUN mkdir /app
-#                 RUN mkdir -p /app/container
-#                 ADD {environment['requirements']} /app/container
-#                 ADD {environment['file']} /app/container
-#                 ADD MLproject_{environment['name']} /app/container/MLproject
-#                 WORKDIR /app
-#                 RUN pip install -r {environment['requirements']}
-#
-#     ''')
-#     return template
+
+def format_parameters(params):
+    list_params = list()
+    for k, v in params.items():
+        list_params.append(f"--{k} {v}")
+
+    return ' '.join(list_params)
 
 
-# def mlproject_template(workflow, name='workflow'):
-#
-#     mlproject = {'name': name,
-#                  'entry_points': {
-#                      wflow['name']: {'command': wflow['file']} for wflow in workflow
-#                  }
-#                 }
-#
-#     return mlproject
+def check_verbosity(verbose):
+    logger = logging.getLogger()
+    if verbose:
+        logger.disabled = False
+    else:
+        logger.disabled = True
 
-# def generate_tracker(folder, port, name):
-#     # if app_type == 'single':
-#     # list_dir_docker = os.listdir(folder)
-#     # dockerfile = [w for w in list_dir_docker if 'Dockerfile' in w]
-#     filename = f'Dockerfile_tracker_{name}'
-#     # dockerfile_path = os.path.join(folder, 'workflow', filename)
-#     dockerfile_path = os.path.join(folder, filename)
-#     dockerfile = dockerfile_tracker(port)
-#
-#     with open(dockerfile_path, 'w') as f:
-#         f.writelines(dockerfile)
-#     logging.info(f'[+] Dockerfile: [{filename}] was created successfully.')
-#     # else:
-#     #     logging.info(f'[+] Dockerfile was found.')
-#
-#     return dockerfile_path
 
-# return None
+def get_autodeploy_paths(app_dir):
+    ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
+    ad_meta_dir = os.path.join(ad_stuff_dir, 'ad-meta')
+    ad_tracker_dir = os.path.join(ad_stuff_dir, 'ad-tracker')
+    ad_checker_dir = os.path.join(ad_stuff_dir, 'ad-checker')
+    ad_checker_pred_dir = os.path.join(ad_checker_dir, 'predictions')
+    ad_checker_model_dir = os.path.join(ad_checker_dir, 'model')
+    ad_checker_scaler_dir = os.path.join(ad_checker_dir, 'scaler')
+    ad_paths = {'app_dir': app_dir,
+                'ad_stuff_dir': ad_stuff_dir,
+                'ad_meta_dir': ad_meta_dir,
+                'ad_tracker_dir': ad_tracker_dir,
+                'ad_checker_dir': ad_checker_dir,
+                'ad_checker_pred_dir': ad_checker_pred_dir,
+                'ad_checker_model_dir': ad_checker_model_dir,
+                'ad_checker_scaler_dir': ad_checker_scaler_dir}
+
+    return ad_paths
+
