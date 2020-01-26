@@ -10,8 +10,9 @@ import time
 import requests
 import json
 import datetime
-from autodeploy import tools
+import pandas as pd
 
+from autodeploy import tools
 from textwrap import dedent
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
@@ -28,9 +29,7 @@ class Deploy:
             deployer = Deploy(platform)
 
         Parameters:
-            environment (object): The platform that comes from setup class.
-            api_image_name (object): The platform that comes from setup class.
-            predictor_port (object): The platform that comes from setup class.
+            app_dir (str): The platform that comes from setup class.
 
         """
         # if environment is not None:
@@ -47,10 +46,8 @@ class Deploy:
         self.logs_workflow = None
         self.logs_build_image = None
         self.logs_run_ctn = None
-        self.api_image_name = None
         self.api_container_object = None
         self.predictor_repr = None
-        self.input_df = None
         self.input_pred_df = None
         # self.predictor_port = predictor_port
 
@@ -67,6 +64,7 @@ class Deploy:
         Parameters:
             model_path (str): Name API image.
             image (str): Name API image.
+            name (str): Name API image.
         Returns:
             image (object): Docker container.
         """
@@ -137,21 +135,11 @@ class Deploy:
         _repr = dedent(f"""
         Predictor = (
             Name: {self.predictor_repr['name']},
-            Env: {self.predictor_repr['env']},
+            Environment(image): {self.predictor_repr['env']},
             Container: {self.predictor_repr['ctn']},
             URL=0.0.0.0:{self.predictor_repr['port']}),
         """)
         return _repr
-
-    # def __repr__(self):
-    #     _repr = dedent(f"""
-    #     Environment = (
-    #         image: {self.env_image_name},
-    #         container: {self.env_container_name},
-    #         type={self.app_type}),
-    #         tracker=0.0.0.0:{self.tracker_port}),
-    #     """)
-    #     return _repr
 
     def save_env(self, registry_name):
         """
@@ -175,55 +163,29 @@ class Deploy:
                 logging.error(f"{e}")
                 logging.error(f"Container creation failed.")
 
-    def predict(self, input_df, port=5001):
+    def predict(self, input_name, port=5001):
         """
         Use the API to predict with a given input .
 
         Parameters:
-            input_df (pandas): Input sample.
-            to_save (bool): Save the predictions or not.
-            path_pred (str): Where to save the predictions.
+            input_name (str): Input sample.
+            port (int): Predictor's port
         Returns:
             response_json (dict): prediction.
         """
         url = f'http://localhost:{port}/invocations'
 
         try:
-            start = time.time()
-            input_data_json = {
-                'columns': list(input_df.columns),
-                'data': input_df.values.tolist()
-            }
-            response = requests.post(
-                url=url, data=json.dumps(input_data_json),
-                headers={"Content-type": "application/json; format=pandas-split"})
-            response_json = json.loads(response.text)
+            input_path = os.path.join(self.ad_paths['app_workflow_dir'], input_name)
+            self.input_pred_df = tools.predict(input_path, port)
 
-            end = time.time()
-            logging.info(f'Predicting from port: {port}')
-            logging.info(f'Time elapsed: {end-start}')
-
-            self.input_df = input_df.copy()
-            # self.predictions = response_json
-
-            # preds = [d['0'] for d in self.predictions]
-            preds = [d for d in response_json]
-            # df_pred = pd.DataFrame(self.input_to_predict['data'],
-            #                        columns=self.input_to_predict['columns'])
-            self.input_df['pred'] = preds
-
-            self.input_pred_df = self.input_df
-
-            # if to_save:
-            #     self.save_prediction
-            # self.save_prediction(self.ad_paths['ad_checker_dir'])
-
-            id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
-            input_pred_filename = f'input_predictions_{id_date}.csv'
-            pred_path = os.path.join(self.ad_paths['ad_checker_dir'],
-                                     input_pred_filename)
-            self.input_pred_df.to_csv(pred_path, index=False)
-            logging.info(f"Input and predictions were saved at: {self.ad_paths['ad_checker_dir']}")
+            # id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+            # input_pred_filename = f'input_predictions_{id_date}.csv'
+            # pred_path = os.path.join(self.ad_paths['ad_checker_dir'],
+            #                          input_pred_filename)
+            # self.input_pred_df.to_csv(pred_path, index=False)
+            # logging.info(f"Input and predictions were saved at: {self.ad_paths['ad_checker_dir']}")
+            self.save_predictions(self.input_pred_df)
 
             return self.input_pred_df
 
@@ -231,22 +193,21 @@ class Deploy:
             logging.error(f"{e}")
             logging.error(f"Request to API failed.")
 
-    def save_prediction(self, path_pred):
+    def save_predictions(self, input_pred_df):
         """
-        Save inputs and predictions to analyze later .
+        Save inputs and predictions to the checker dir
 
         Parameters:
-            path_pred (str): Where to save the predictions.
+            input_pred_df (DataFrame): Where to save the predictions.
         Returns:
             None
         """
-
-        path_pred = os.path.join(path_pred, 'predictions.csv')
-        self.input_pred_df.to_csv(path_pred, index=False)
-        logging.info(f'Input and predictions were saved at: {path_pred}')
-
-        # self.input_pred_filename.to_csv(path_pred,
-        #                        mode='a', index=False, header=False)
+        id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
+        input_pred_filename = f'input_predictions_{id_date}.csv'
+        pred_path = os.path.join(self.ad_paths['ad_checker_pred_dir'],
+                                 input_pred_filename)
+        input_pred_df.to_csv(pred_path, index=False)
+        logging.info(f"Input and predictions were saved at: {pred_path}")
 
     def stop_predictor(self, name='predictor'):
 
