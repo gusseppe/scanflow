@@ -8,6 +8,9 @@ import datetime
 import pandas as pd
 import docker
 import oyaml as yaml
+import time
+import requests
+import json
 
 from textwrap import dedent
 from sklearn.datasets import make_classification
@@ -608,6 +611,7 @@ def check_verbosity(verbose):
 
 
 def get_autodeploy_paths(app_dir):
+    app_workflow_dir = os.path.join(app_dir, 'workflow')
     ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
     ad_meta_dir = os.path.join(ad_stuff_dir, 'ad-meta')
     ad_tracker_dir = os.path.join(ad_stuff_dir, 'ad-tracker')
@@ -616,6 +620,7 @@ def get_autodeploy_paths(app_dir):
     ad_checker_model_dir = os.path.join(ad_checker_dir, 'model')
     ad_checker_scaler_dir = os.path.join(ad_checker_dir, 'scaler')
     ad_paths = {'app_dir': app_dir,
+                'app_workflow_dir': app_workflow_dir,
                 'ad_stuff_dir': ad_stuff_dir,
                 'ad_meta_dir': ad_meta_dir,
                 'ad_tracker_dir': ad_tracker_dir,
@@ -625,4 +630,45 @@ def get_autodeploy_paths(app_dir):
                 'ad_checker_scaler_dir': ad_checker_scaler_dir}
 
     return ad_paths
+
+
+def predict(input_path, port=5001):
+    """
+    Use the API to predict with a given input .
+
+    Parameters:
+        input_path (str): Input sample path.
+        port (int): Predictor's port
+    Returns:
+        response_json (dict): prediction.
+    """
+    url = f'http://localhost:{port}/invocations'
+
+    try:
+        input_df = pd.read_csv(input_path)
+        start = time.time()
+        input_data_json = {
+            'columns': list(input_df.columns),
+            'data': input_df.values.tolist()
+        }
+        response = requests.post(
+            url=url, data=json.dumps(input_data_json),
+            headers={"Content-type": "application/json; format=pandas-split"})
+        response_json = json.loads(response.text)
+
+        end = time.time()
+        logging.info(f'Predicting from port: {port}')
+        logging.info(f'Time elapsed: {end-start}')
+
+        preds = [d for d in response_json]
+        input_df['pred'] = preds
+
+        return input_df
+
+    except requests.exceptions.HTTPError as e:
+        logging.error(f"{e}")
+        logging.error(f"Request to API failed.")
+
+
+
 

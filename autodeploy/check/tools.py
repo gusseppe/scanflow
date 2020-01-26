@@ -10,6 +10,7 @@ from scipy.stats import ks_2samp
 from datetime import datetime
 # from sklearn.externals import joblib
 from sklearn.preprocessing import MinMaxScaler
+from autodeploy.check import dd_autoencoder
 
 
 def add_noise(df, mu=0, sigma=0.1):
@@ -65,19 +66,4 @@ def get_input_predictions(checker_dir, periods=1):
         logging.error(f"Path does not exist.", exc_info=True)
 
 
-def scale(scaler_dir, df):
-    scaler_path = os.path.join(scaler_dir, 'scaler.save')
 
-    if os.path.isfile(scaler_path):
-        scaler = joblib.load(scaler_path)
-        X = pd.DataFrame(scaler.transform(df),
-                         columns=df.columns,
-                         index=df.index)
-    else:
-        scaler = MinMaxScaler()
-        X = pd.DataFrame(scaler.fit_transform(df),
-                         columns=df.columns,
-                         index=df.index)
-        joblib.dump(scaler, scaler_path)
-
-    return X

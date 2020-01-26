@@ -2,7 +2,7 @@ version: '3'
 services:
   get_new_data:
     image: get_new_data
-    container_name: get_new_data-20200122194411
+    container_name: get_new_data-20200126032530
     networks:
     - network-workflow3
     depends_on:
@@ -13,9 +13,9 @@ services:
     - /home/guess/Desktop/autodeploy/examples/demo2/data-eng/:/app
     - /home/guess/Desktop/autodeploy/examples/demo2/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
     tty: 'true'
-  preprocessing_eng:
-    image: preprocessing_eng
-    container_name: preprocessing_eng-20200122194411
+  preprocessing_new_data:
+    image: preprocessing_new_data
+    container_name: preprocessing_new_data-20200126032530
     networks:
     - network-workflow3
     depends_on:
@@ -28,7 +28,7 @@ services:
     tty: 'true'
   tracker-workflow3:
     image: tracker-workflow3
-    container_name: tracker-workflow3-20200122194411
+    container_name: tracker-workflow3-20200126032530
     networks:
     - network-workflow3
     volumes:
