@@ -378,7 +378,7 @@ def create_registry(name='autodeploy_registry'):
         logging.error(f"[-] Registry creation failed.", exc_info=True)
 
 
-def build_image(name, app_dir, dockerfile_path, node_type='executor', port=None):
+def build_image(name, dockerfile_dir, dockerfile_path, node_type='executor', port=None):
 
     image_from_repo = None
 
@@ -392,9 +392,12 @@ def build_image(name, app_dir, dockerfile_path, node_type='executor', port=None)
     try:
 
         if image_from_repo is None:
-            image = client.images.build(path=os.path.join(app_dir, 'workflow'),
+            image = client.images.build(path=dockerfile_dir,
                                         dockerfile=dockerfile_path,
                                         tag=name)
+            # image = client.images.build(path=os.path.join(app_dir, 'workflow'),
+            #                             dockerfile=dockerfile_path,
+            #                             tag=name)
             logging.info(f'[+] Image [{name}] was built successfully.')
             # self.env_image = image[0]
             # environments.append({name: {'image': image[0]}})
@@ -670,5 +673,42 @@ def predict(input_path, port=5001):
         logging.error(f"Request to API failed.")
 
 
+def run_step(step):
+    """
+    Run a workflow that consists of several python files.
+
+    Parameters:
+        workflow (dict): Workflow of executions
+    Returns:
+        image (object): Docker image.
+    """
+    # logging.info(f'Running workflow: type={self.app_type} .')
+    # logging.info(f'[+] Running workflow on [{env_container_name}].')
+    try:
+        env_name = step['name']
+        env_container = client.containers.get(env_name)
+        if 'parameters' in step.keys():
+            cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
+            result = env_container.exec_run(cmd=cmd,
+                                            workdir='/app/workflow')
+        else:
+            result = env_container.exec_run(cmd=f"python {step['file']}",
+                                            workdir='/app/workflow')
+
+        # result = env_container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
+        logging.info(f"[+] Running ({step['file']}). ")
+        logging.info(f"[+] Output:  {result.output.decode('utf-8')} ")
+
+        logging.info(f"[+] Environment ({env_name}) finished successfully. ")
+
+        # return env_container, result
+        return env_name, result
+        # self.logs_workflow = result.output.decode("utf-8")
+
+    except docker.api.client.DockerException as e:
+        logging.error(f"{e}")
+        logging.error(f"[-] Environment [{step['name']}] has not started yet.")
+
+    return None
 
 

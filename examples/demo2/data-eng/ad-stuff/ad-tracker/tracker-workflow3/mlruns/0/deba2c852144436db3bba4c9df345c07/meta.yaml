@@ -1,0 +1,15 @@
+artifact_uri: /mlflow/mlruns/0/deba2c852144436db3bba4c9df345c07/artifacts
+end_time: 1580141038681
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: deba2c852144436db3bba4c9df345c07
+run_uuid: deba2c852144436db3bba4c9df345c07
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1580141038522
+status: 3
+tags: []
+user_id: root
