@@ -6,6 +6,7 @@ import logging
 import subprocess
 import os
 import docker
+from multiprocessing import Pool
 import time
 import requests
 import json
@@ -54,10 +55,9 @@ class Run:
         self.workflows = list()
         # self.predictor_port = predictor_port
 
-
     def pipeline(self):
         self.run_workflow()
-        self.deploy()
+        # self.deploy()
 
         return self
 
@@ -73,56 +73,81 @@ class Run:
 
         for wf_user in self.workflows_user:
             logging.info(f"[++] Running workflow: [{wf_user['name']}].")
-            environments = self.run_workflow(wf_user)
+            if 'parallel' in wf_user.keys():
+                environments = self.run_workflow(wf_user, wf_user['parallel'])
+            else:
+                environments = self.run_workflow(wf_user)
+
             logging.info(f"[+] Workflow: [{wf_user['name']}] was run successfully.")
             workflow = {'name': wf_user['name'], 'envs': environments}
             self.workflows.append(workflow)
 
-    def run_workflow(self, workflow):
+    def run_workflow(self, workflow, parallel=False):
         """
         Run a workflow that consists of several python files.
 
         Parameters:
             workflow (dict): Workflow of executions
+            parallel (bool): Parallel execution
         Returns:
             image (object): Docker image.
         """
         # logging.info(f'Running workflow: type={self.app_type} .')
         # logging.info(f'[+] Running workflow on [{env_container_name}].')
         containers = []
-        for wflow in workflow['workflow']:
-            logging.info(f"[+] Running env: [{workflow['name']}:{wflow['name']}].")
 
-            try:
-                env_name = wflow['name']
-                env_container = client.containers.get(env_name)
-                if 'parameters' in wflow.keys():
-                    cmd = f"python {wflow['file']} {tools.format_parameters(wflow['parameters'])}"
-                    result = env_container.exec_run(cmd=cmd,
-                                                    workdir='/app/workflow')
-                else:
-                    result = env_container.exec_run(cmd=f"python {wflow['file']}",
-                                                    workdir='/app/workflow')
+        if parallel:
+            steps = [step for step in workflow['workflow']]
+            pool = Pool(processes=len(steps))
+            pool.map(tools.run_step, steps)
+        else:
+            for step in workflow['workflow']:
+                logging.info(f"[+] Running env: [{workflow['name']}:{step['name']}].")
 
-                # result = env_container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
-                logging.info(f"[+] Running ({wflow['file']}). ")
-                logging.info(f"[+] Output:  {result.output.decode('utf-8')} ")
-
-                logging.info(f"[+] Environment ({env_name}) finished successfully. ")
-
-                containers.append({'name': wflow['name'],
+                env_container, result = tools.run_step(step)
+                containers.append({'name': step['name'],
                                    'ctn': env_container,
                                    'result': result.output.decode('utf-8')[:10]})
 
-                # self.logs_workflow = result.output.decode("utf-8")
-
-            except docker.api.client.DockerException as e:
-                logging.error(f"{e}")
-                logging.error(f"[-] Environment [{wflow['name']}] has not started yet.")
-
-                return None
-
         return containers
+
+    # def run_step(self, step):
+    #     """
+    #     Run a workflow that consists of several python files.
+    #
+    #     Parameters:
+    #         workflow (dict): Workflow of executions
+    #     Returns:
+    #         image (object): Docker image.
+    #     """
+    #     # logging.info(f'Running workflow: type={self.app_type} .')
+    #     # logging.info(f'[+] Running workflow on [{env_container_name}].')
+    #     try:
+    #         env_name = step['name']
+    #         env_container = client.containers.get(env_name)
+    #         if 'parameters' in step.keys():
+    #             cmd = f"python {step['file']} {tools.format_parameters(step['parameters'])}"
+    #             result = env_container.exec_run(cmd=cmd,
+    #                                             workdir='/app/workflow')
+    #         else:
+    #             result = env_container.exec_run(cmd=f"python {step['file']}",
+    #                                             workdir='/app/workflow')
+    #
+    #         # result = env_container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
+    #         logging.info(f"[+] Running ({step['file']}). ")
+    #         logging.info(f"[+] Output:  {result.output.decode('utf-8')} ")
+    #
+    #         logging.info(f"[+] Environment ({env_name}) finished successfully. ")
+    #
+    #         return env_container, result
+    #         # self.logs_workflow = result.output.decode("utf-8")
+    #
+    #     except docker.api.client.DockerException as e:
+    #         logging.error(f"{e}")
+    #         logging.error(f"[-] Environment [{step['name']}] has not started yet.")
+    #
+    #     return None
+
 
     def __repr__(self):
         workflows_names = [d['name'] for d in self.workflows]

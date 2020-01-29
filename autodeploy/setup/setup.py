@@ -11,6 +11,7 @@ import json
 
 from autodeploy import tools
 from textwrap import dedent
+from shutil import copy2
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
@@ -153,6 +154,8 @@ class Setup:
                                                             executor=wflow,
                                                             dock_type='executor',
                                                             port=None)
+                source = os.path.join(self.app_dir, 'workflow', wflow['requirements'])
+                copy2(source, meta_compose_dir)
                 metadata = tools.build_image(env_image_name, meta_compose_dir, dockerfile_path)
                 environments.append(metadata)
 
@@ -161,8 +164,10 @@ class Setup:
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
                 # TODO: copy provided dockerfile on compose_verbose
-                dockerfile_path = os.path.join(self.app_dir, 'workflow', wflow['dockerfile'])
-                metadata = tools.build_image(env_image_name, self.app_dir, dockerfile_path)
+                dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+                dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
+                copy2(dockerfile_path, meta_compose_dir)
+                metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
                 environments.append(metadata)
 
             elif 'env' in wflow.keys():  # the provided image name exists in repository

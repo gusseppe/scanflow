@@ -93,6 +93,9 @@ class DeepDenoiseAE(tf.keras.Model):
 
 
 def scale(scaler_dir, df):
+    np.random.seed(42)
+    tf.random.set_seed(42)
+
     scaler_path = os.path.join(scaler_dir, 'scaler.save')
 
     if os.path.isfile(scaler_path):
@@ -123,6 +126,8 @@ def get_loss(model, X):
 
 
 def add_noise(X_train):
+    np.random.seed(42)
+    tf.random.set_seed(42)
     X_train_noisy = X_train + np.random.normal(loc=0.0, scale=0.05, size=X_train.shape)
     X_train_noisy = np.clip(X_train_noisy, 0., 1.)
 
@@ -139,7 +144,10 @@ def plot_predictions(E_full, E_test):
     fig.add_trace(go.Scatter(x=E_train.index, y=E_train['Loss_mae'], name="Loss Training",
                              line_color='deepskyblue'))
 
-    if not any(E_test['Anomaly']):
+    if all(E_test['Anomaly']):
+        fig.add_trace(go.Scatter(x=E_test.index, y=E_test['Loss_mae'], name="Loss Testing",
+                                 line_color='red'))
+    elif not any(E_test['Anomaly']):
         fig.add_trace(go.Scatter(x=E_test.index, y=E_test['Loss_mae'], name="Loss Testing",
                                  line_color='green'))
     else:
