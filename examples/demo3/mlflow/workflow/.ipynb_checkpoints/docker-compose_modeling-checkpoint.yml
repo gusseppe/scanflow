@@ -1,0 +1,10 @@
+version: 3
+services:
+  modeling:
+    image: modeling
+    depends_on: tracker
+    MLFLOW_TRACKING_URI: http://tracker:8002
+  tracker:
+    image: tracker_workflow2
+    expose: '8002'
+    ports: 8002:8002

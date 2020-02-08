@@ -2,7 +2,7 @@ version: '3'
 services:
   gathering:
     image: gathering
-    container_name: gathering-20200129180620
+    container_name: gathering-20200204151615
     networks:
     - network-workflow1
     depends_on:
@@ -15,7 +15,7 @@ services:
     tty: 'true'
   preprocessing:
     image: preprocessing
-    container_name: preprocessing-20200129180620
+    container_name: preprocessing-20200204151615
     networks:
     - network-workflow1
     depends_on:
@@ -28,7 +28,7 @@ services:
     tty: 'true'
   tracker-workflow1:
     image: tracker-workflow1
-    container_name: tracker-workflow1-20200129180620
+    container_name: tracker-workflow1-20200204151615
     networks:
     - network-workflow1
     volumes:
@@ -37,7 +37,7 @@ services:
     - 8006:8001
   modeling:
     image: modeling
-    container_name: modeling-20200129180620
+    container_name: modeling-20200204151615
     networks:
     - network-workflow2
     depends_on:
@@ -50,7 +50,7 @@ services:
     tty: 'true'
   modeling2:
     image: modeling2
-    container_name: modeling2-20200129180620
+    container_name: modeling2-20200204151615
     networks:
     - network-workflow2
     depends_on:
@@ -63,7 +63,7 @@ services:
     tty: 'true'
   tracker-workflow2:
     image: tracker-workflow2
-    container_name: tracker-workflow2-20200129180620
+    container_name: tracker-workflow2-20200204151615
     networks:
     - network-workflow2
     volumes:

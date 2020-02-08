@@ -1,0 +1,10 @@
+version: 3
+services:
+  gathering:
+    image: gathering
+    depends_on: tracker
+    MLFLOW_TRACKING_URI: http://tracker:8001
+  tracker:
+    image: tracker_workflow1
+    expose: '8001'
+    ports: 8001:8001
