@@ -1,4 +1,5 @@
 import pandas as pd
+import mlflow
 import os
 import numpy as np
 import logging
@@ -8,9 +9,6 @@ import joblib
 
 from scipy.stats import ks_2samp
 from datetime import datetime
-# from sklearn.externals import joblib
-from sklearn.preprocessing import MinMaxScaler
-from autodeploy.check import dd_autoencoder
 
 
 def add_noise(df, mu=0, sigma=0.1):
@@ -65,5 +63,18 @@ def get_input_predictions(checker_dir, periods=1):
         logging.error(f"{e}")
         logging.error(f"Path does not exist.", exc_info=True)
 
+
+def search_by_key(key, var):
+    if hasattr(var,'items'):
+        for k, v in var.items():
+            if k == key:
+                yield v
+            if isinstance(v, dict):
+                for result in search_by_key(key, v):
+                    yield result
+            elif isinstance(v, list):
+                for d in v:
+                    for result in search_by_key(key, d):
+                        yield result
 
 

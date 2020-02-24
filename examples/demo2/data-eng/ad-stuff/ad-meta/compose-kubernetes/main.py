@@ -13,15 +13,15 @@ app_dir = '/home/guess/Desktop/autodeploy/examples/demo2/data-eng/'
 
 # Workflows
 workflow1 = [
-    {'name': 'gathering-20200129133531', 'file': 'gathering.py', 
+    {'name': 'gathering-20200224170602', 'file': 'gathering.py', 
             'env': 'gathering'},
 
-    {'name': 'preprocessing-20200129133531', 'file': 'preprocessing.py', 
+    {'name': 'preprocessing-20200224170602', 'file': 'preprocessing.py', 
             'env': 'preprocessing'}, 
 
 ]
 workflow2 = [
-    {'name': 'modeling-20200129133531', 'file': 'modeling.py', 
+    {'name': 'modeling-20200224170602', 'file': 'modeling.py', 
             'env': 'modeling'}, 
 
 
