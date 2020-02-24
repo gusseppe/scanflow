@@ -11,6 +11,8 @@ import oyaml as yaml
 import time
 import requests
 import json
+import matplotlib.pyplot as plt
+import networkx as nx
 
 from textwrap import dedent
 from sklearn.datasets import make_classification
@@ -68,7 +70,7 @@ def compose_template_repo(ad_paths, workflows):
 
     for workflow in workflows:
         # Executors
-        for node in workflow['workflow']:
+        for node in workflow['executors']:
             tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
@@ -122,7 +124,7 @@ def compose_template_verbose(ad_paths, workflows):
 
     for workflow in workflows:
         # Executors
-        for node in workflow['workflow']:
+        for node in workflow['executors']:
             tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
@@ -176,7 +178,7 @@ def compose_template_swarm(ad_paths, workflows):
 
     for workflow in workflows:
         # Executors
-        for node in workflow['workflow']:
+        for node in workflow['executors']:
             tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
@@ -378,7 +380,8 @@ def create_registry(name='autodeploy_registry'):
         logging.error(f"[-] Registry creation failed.", exc_info=True)
 
 
-def build_image(name, dockerfile_dir, dockerfile_path, node_type='executor', port=None):
+def build_image(name, dockerfile_dir, dockerfile_path,
+                node_type='executor', port=None, tracker_dir=None):
 
     image_from_repo = None
 
@@ -401,15 +404,33 @@ def build_image(name, dockerfile_dir, dockerfile_path, node_type='executor', por
             logging.info(f'[+] Image [{name}] was built successfully.')
             # self.env_image = image[0]
             # environments.append({name: {'image': image[0]}})
-            return {'name': name, 'image': image[0],
-                    'type': node_type, 'status': 0, 'port': port} # 0:not running
+            if node_type == 'tracker':
+                metadata = {'name': name, 'image': image[0].tags,
+                            'type': node_type, 'status': 0,
+                            'port': port, 'tracker_dir': tracker_dir}  # 0:not running
+            else:
+                metadata = {'name': name, 'image': image[0].tags,
+                            'type': node_type, 'status': 0} # 0:not running
+
+            return metadata
 
         else:
             logging.warning(f'[+] Image [{name}] already exists.')
             logging.info(f'[+] Image [{name}] was loaded successfully.')
 
-            return {'name': name, 'image': image_from_repo,
-                    'type': node_type, 'status': 0, 'port': port}
+            if node_type == 'tracker':
+                metadata = {'name': name, 'image': image_from_repo.tags,
+                            'type': node_type, 'status': 0,
+                            'port': port, 'url': f'http://localhost:{port}/',
+                            'tracker_dir': tracker_dir}  # 0:not running
+            else:
+                metadata = {'name': name, 'image': image_from_repo.tags,
+                            'type': node_type, 'status': 0} # 0:not running
+
+            return metadata
+
+            # return {'name': name, 'image': image_from_repo,
+            #         'type': node_type, 'status': 0, 'port': port}
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
@@ -712,3 +733,95 @@ def run_step(step):
     return None
 
 
+def save_workflows(ad_paths, workflows):
+    meta_dir = ad_paths['ad_meta_dir']
+
+    workflows_metadata_name = 'workflows.json'
+    workflows_metadata_path = os.path.join(meta_dir, workflows_metadata_name)
+
+    with open(workflows_metadata_path, 'w') as fout:
+        json.dump(workflows, fout)
+
+
+def read_workflows(ad_paths):
+    meta_dir = ad_paths['ad_meta_dir']
+
+    workflows_metadata_name = 'workflows.json'
+    workflows_metadata_path = os.path.join(meta_dir, workflows_metadata_name)
+
+    try:
+        with open(workflows_metadata_path) as fread:
+            data = json.load(fread)
+
+        return data
+
+    except ValueError as e:
+        logging.error(f"{e}")
+        logging.error(f"[-] Workflows metadata has not yet saved.")
+
+
+def workflow_to_graph(wflows_meta, name='Graph 1'):
+    graph = list()
+    last_nodes = list()
+    if_tracker = 0
+    for wflow in wflows_meta:
+        # Parent nodes
+        nodes = wflow['nodes']
+        parent_node_name = wflow['name']
+        # Root parent (e.g, Data science team)
+        graph.append({'data': {'id': name,
+                                   'label': name}})
+        # Workflow parent (e.g, workflow1)
+        graph.append({'data': {'id': parent_node_name,
+                                   'label': parent_node_name,
+                                   'parent': name}})
+
+        if_tracker = int(any("tracker" in node['name'] for node in nodes))
+        for i, node in enumerate(nodes):
+            children_node_name = node['name']
+            if node['type'] == 'executor':
+                # Children nodes
+                graph.append({'data': {'id': children_node_name,
+                                           'label': children_node_name,
+                                           'parent': parent_node_name}})
+                # Edges in each workflow
+                if i+1+if_tracker < len(nodes):
+                    graph.append({'data': {'source': children_node_name,
+                                               'target': nodes[i+1]['name']}})
+
+                if i == len(nodes)-(1 + if_tracker):
+                    last_nodes.append(children_node_name)
+
+        if_tracker = 0
+
+    # Edges between workflows
+    for i, last_node in enumerate(last_nodes):
+        if i+1 < len(last_nodes):
+            graph.append({'data': {'source': last_node,
+                                   'target': last_nodes[i+1]}})
+
+    return graph
+
+
+def draw_graph(graph):
+    G = nx.DiGraph(directed=True)
+
+    edges_with_parent = [(d['data']['parent'], d['data']['id'])
+              for d in graph if 'parent' in d['data'].keys()]
+    parent_nodes = {edge[0]:'blue' for edge in edges_with_parent}
+    # color_map = ['blue' for e in edges]
+    edges_rest = [(d['data']['source'], d['data']['target'])
+              for d in graph if 'source' in d['data'].keys()]
+
+    rest_nodes = {edge:'cyan' for edge in list(set(list(sum(edges_rest, ()))))}
+
+    total_edges = edges_with_parent + edges_rest
+
+    G.add_edges_from(total_edges)
+
+#     plt.title('Topology')
+    pos = nx.spectral_layout(G)
+    color_nodes = {**parent_nodes, **rest_nodes}
+    color_map = [color_nodes[node] for node in G.nodes()]
+    nx.draw(G, pos, node_color=color_map, with_labels = True, arrows=True)
+    plt.show()

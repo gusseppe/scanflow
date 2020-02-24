@@ -57,7 +57,8 @@ class Setup:
         # self.ad_paths['ad_checker_scaler_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'scaler')
         self.ad_paths = tools.get_autodeploy_paths(app_dir)
 
-        self.workflows_user = workflows
+        self.workflows_user = [w.to_dict for w in workflows]
+        # self.workflows_user = workflows
         self.verbose = verbose
         tools.check_verbosity(verbose)
         # self.master_file = master_file
@@ -67,15 +68,6 @@ class Setup:
         self.workflows = list()  # Contains name, images, containers.
         self.registry = None
 
-    # def check_verbosity(self):
-    #     logger = logging.getLogger()
-    #     if self.verbose:
-    #         logger.disabled = False
-    #     else:
-    #         logger.disabled = True
-    #
-    #     return self
-    #
     def run_pipeline(self):
         self.build_workflows()
         self.start_workflows()
@@ -114,10 +106,12 @@ class Setup:
             logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
             workflow = {'name': wf_user['name'],
                         'nodes': environments}
-                            # 'type': 'execution node',
-                            # 'tracker': tracker}
+            # 'type': 'execution node',
+            # 'tracker': tracker}
 
             self.workflows.append(workflow)
+
+        tools.save_workflows(self.ad_paths, self.workflows)
 
     def build_workflow(self, workflow):
         """
@@ -130,7 +124,7 @@ class Setup:
         """
 
         environments = []
-        for wflow in workflow['workflow']:
+        for wflow in workflow['executors']:
             # mlproject_path = tools.generate_mlproject(self.app_dir,
             #                                           environment=wflow,
             #                                           wflow_name=workflow['name'])
@@ -144,9 +138,15 @@ class Setup:
 
             env_image_name = f"{wflow['name']}"
 
+            # Save each python file to compose-verbose folder
+            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            source = os.path.join(self.app_dir, 'workflow', wflow['file'])
+            copy2(source, meta_compose_dir)
+
             # Create Dockerfile if needed
             if 'requirements' in wflow.keys():
                 meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
                 # dockerfile_path = tools.generate_dockerfile(meta_compose_dir, environment=wflow)
@@ -156,6 +156,7 @@ class Setup:
                                                             port=None)
                 source = os.path.join(self.app_dir, 'workflow', wflow['requirements'])
                 copy2(source, meta_compose_dir)
+                # metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
                 metadata = tools.build_image(env_image_name, meta_compose_dir, dockerfile_path)
                 environments.append(metadata)
 
@@ -163,7 +164,6 @@ class Setup:
                 meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
-                # TODO: copy provided dockerfile on compose_verbose
                 dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
                 dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
                 copy2(dockerfile_path, meta_compose_dir)
@@ -176,10 +176,13 @@ class Setup:
                     # env_tag = wflow['name']
 
                     image_from_repo = client.images.get(env_name_from_repo)
+                    # environments.append({'name': env_image_name,
+                    #                      'image': image_from_repo,
+                    #                      'type': 'executor',
+                    #                      'port': None})
                     environments.append({'name': env_image_name,
-                                         'image': image_from_repo,
-                                         'type': 'executor',
-                                         'port': None})
+                                         'image': image_from_repo.tags,
+                                         'type': 'executor'})
 
                 except docker.api.client.DockerException as e:
                     # logging.error(f"{e}")
@@ -189,14 +192,19 @@ class Setup:
             port = workflow['tracker']['port']
             meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
             # os.makedirs(meta_compose_dir, exist_ok=True)
+            # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
             dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                         executor=workflow,
                                                         dock_type='tracker',
                                                         port=port)
+            # copy2(dockerfile_path, meta_compose_dir)
+
             tracker_image_name = f"tracker-{workflow['name']}"
-            # tracker_image = tools.build_image(tracker_image_name, self.app_dir, dockerfile_path)
-            metadata = tools.build_image(tracker_image_name, self.app_dir,
-                                         dockerfile_path, 'tracker', port)
+            tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
+            metadata = tools.build_image(tracker_image_name, meta_compose_dir,
+                                         dockerfile_path, 'tracker', port, tracker_dir)
+            # metadata = tools.build_image(tracker_image_name, self.app_dir,
+            #                              dockerfile_path, 'tracker', port)
             environments.append(metadata)
 
             # return environments, tracker_image
@@ -209,7 +217,7 @@ class Setup:
         Start environments (Docker image)
 
         Parameters:
-            name (str): Docker container name for dashboard.
+            name (str): Docker container name for dashbGoard.
             port (dict): Dictionary describing ports to bind.
                 Example: {'8001/tcp': 8001}
             tracker (bool): If a tracker should be activated.
@@ -247,7 +255,7 @@ class Setup:
         tools.start_network(name=net_name)
 
         containers = []
-        for wflow in workflow['workflow']:
+        for wflow in workflow['executors']:
 
             logging.info(f"[+] Starting env: [{workflow['name']}:{wflow['name']}].")
             env_tag_name = f"{wflow['name']}"
@@ -262,6 +270,7 @@ class Setup:
                 container_path = '/app'
 
                 workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+
                 workflow_tracker_dir_ctn = '/mlflow'
                 volume = {host_path: {'bind': container_path, 'mode': 'rw'},
                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
@@ -326,7 +335,7 @@ class Setup:
 
     def stop_workflow(self, workflow, tracker, network):
 
-        for wflow in workflow['workflow']:
+        for wflow in workflow['executors']:
             try:
                 container_from_env = client.containers.get(wflow['name'])
                 container_from_env.stop()
@@ -382,6 +391,10 @@ class Setup:
         """)
         return _repr
 
+    def draw_workflows(self, name='graph'):
+        graph = tools.workflow_to_graph(self.workflows, name)
+        tools.draw_graph(graph)
+
     def save_envs(self, registry_name):
         """
         Run an image that yields a environment.
@@ -414,8 +427,8 @@ class Setup:
         try:
             # for name_ctn, ctn in self.env_container.items():
             container['ctn'].commit(repository=registry_name,
-                                     tag=container['name'],
-                                     message='First commit')
+                                    tag=container['name'],
+                                    message='First commit')
 
             logging.info(f"[+] Environment [{container['name']}] was saved to registry [{registry_name}].")
 
@@ -423,3 +436,110 @@ class Setup:
             logging.error(f"{e}")
             logging.error(f"[-] Saving [{container['name']}] failed.", exc_info=True)
 
+
+class Node(object):
+    """
+        Abstract base Node class.
+
+    """
+    def __init__(self, name):
+        self.name = name
+
+
+class Executor(Node):
+
+    def __init__(self,
+                 name=None,
+                 file=None,
+                 parameters=None,
+                 requirements=None,
+                 dockerfile=None,
+                 env=None):
+
+        super(Executor, self).__init__(name=name)
+        self.file = file
+        self.parameters = parameters
+        self.requirements = requirements
+        self.dockerfile = dockerfile
+        self.env = env
+        self._to_dict = locals()
+
+    @property
+    def to_dict(self):
+        tmp_dict = self._to_dict
+        tmp_dict.pop('self', None)
+        tmp_dict.pop('__class__', None)
+        tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
+        return tmp_dict
+
+
+class Tracker(Node):
+
+    def __init__(self,
+                 name=None,
+                 port=None):
+
+        super(Tracker, self).__init__(name=name)
+        self.port = port
+        self._to_dict = locals()
+
+    @property
+    def to_dict(self):
+        tmp_dict = self._to_dict
+        tmp_dict.pop('self', None)
+        tmp_dict.pop('__class__', None)
+        tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
+        return tmp_dict
+
+
+class Workflow(object):
+    def __init__(self,
+                 name=None,
+                 executors=None,
+                 tracker=None,
+                 parallel=False):
+
+        self.name = name
+        self._executors = executors
+        self._tracker = tracker
+        self.parallel = parallel
+        self._to_dict = locals()
+
+        # self.workflow = [wflow.params for wflow in workflow]
+        # self.params = locals()
+
+    @property
+    def executors(self):
+        if self._executors and isinstance(self._executors[0], Executor):
+            return self._executors
+            # return self._executors
+        else:
+            raise TypeError('The added executor must be '
+                            'an instance of class Executor. '
+                            'Found: ' + str(self._executors[0]))
+
+    @property
+    def tracker(self):
+        if self._tracker and isinstance(self._tracker, Tracker):
+            return self._tracker
+            # return self._tracker
+        else:
+            raise TypeError('The added tracker must be '
+                            'an instance of class Tracker. '
+                            'Found: ' + str(self._tracker[0]))
+
+    @property
+    def to_dict(self):
+        tmp_dict = self._to_dict
+        tmp_dict.pop('self', None)
+        tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
+        executors_list = list()
+        for k, v in tmp_dict.items():
+            if k == 'executors':
+                for executor in v:
+                    executors_list.append(executor.to_dict)
+            elif k == 'tracker':
+                tmp_dict[k] = v.to_dict
+        tmp_dict['executors'] = executors_list
+
+        return tmp_dict

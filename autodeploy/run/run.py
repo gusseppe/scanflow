@@ -40,6 +40,7 @@ class Run:
         #     self.workflow = environment.workflow
         #     self.single_app_dir = environment.single_app_dir
 
+        self.ad_paths = tools.get_autodeploy_paths(workflower.app_dir)
         self.workflower = workflower
         self.workflows_user = workflower.workflows_user
         self.app_dir = workflower.app_dir
@@ -97,11 +98,11 @@ class Run:
         containers = []
 
         if parallel:
-            steps = [step for step in workflow['workflow']]
+            steps = [step for step in workflow['executors']]
             pool = Pool(processes=len(steps))
             pool.map(tools.run_step, steps)
         else:
-            for step in workflow['workflow']:
+            for step in workflow['executors']:
                 logging.info(f"[+] Running env: [{workflow['name']}:{step['name']}].")
 
                 env_container, result = tools.run_step(step)

@@ -17,6 +17,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn import preprocessing
 
 import tensorflow as tf
+tf.get_logger().setLevel('INFO')
 
 from tensorflow.keras import layers
 from tensorflow.keras.layers import Input, Dropout, Dense, Activation
