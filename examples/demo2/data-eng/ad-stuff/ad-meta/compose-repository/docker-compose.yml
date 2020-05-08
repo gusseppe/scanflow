@@ -2,7 +2,7 @@ version: '3'
 services:
   get_new_data:
     image: get_new_data
-    container_name: get_new_data-20200224170602
+    container_name: get_new_data-20200225151052
     networks:
     - network-workflow3
     depends_on:
@@ -15,7 +15,7 @@ services:
     tty: 'true'
   preprocessing_new_data:
     image: preprocessing_new_data
-    container_name: preprocessing_new_data-20200224170602
+    container_name: preprocessing_new_data-20200225151052
     networks:
     - network-workflow3
     depends_on:
@@ -28,7 +28,7 @@ services:
     tty: 'true'
   tracker-workflow3:
     image: tracker-workflow3
-    container_name: tracker-workflow3-20200224170602
+    container_name: tracker-workflow3-20200225151052
     networks:
     - network-workflow3
     volumes:

@@ -1,0 +1,42 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  annotations:
+    kompose.cmd: kompose convert -o configs/ --volumes hostPath
+    kompose.version: 1.15.0 (e3cd4d4)
+  creationTimestamp: null
+  labels:
+    io.kompose.service: preprocessing
+  name: preprocessing
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        io.kompose.service: preprocessing
+    spec:
+      containers:
+      - env:
+        - name: MLFLOW_TRACKING_URI
+          value: http://tracker-workflow1:8001
+        image: localhost:5000/preprocessing
+        imagePullPolicy: IfNotPresent
+        name: preprocessing-20200117213243
+        resources: {}
+        volumeMounts:
+        - mountPath: /app
+          name: preprocessing-hostpath0
+        - mountPath: /mlflow
+          name: preprocessing-hostpath1
+      restartPolicy: Always
+      volumes:
+      - hostPath:
+          path: /home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/autodeploy/examples/demo1/data-science
+        name: preprocessing-hostpath0
+      - hostPath:
+          path: /home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-tracker/tracker-workflow1
+        name: preprocessing-hostpath1
+status: {}
