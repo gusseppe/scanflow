@@ -262,7 +262,7 @@ def dockerfile_template_tracker(port=8001):
     template = dedent(f'''
                 FROM continuumio/miniconda3
                 LABEL maintainer='autodeploy'
-                
+
                 ENV MLFLOW_HOME  /mlflow
                 ENV MLFLOW_HOST  0.0.0.0
                 ENV MLFLOW_PORT  {port}
@@ -273,14 +273,14 @@ def dockerfile_template_tracker(port=8001):
                 RUN mkdir $MLFLOW_HOME
                 RUN mkdir -p $MLFLOW_BACKEND
                 RUN mkdir -p $MLFLOW_ARTIFACT
-                
+
                 WORKDIR $MLFLOW_HOME
-                
+
                 CMD mlflow server  \
                 --backend-store-uri $MLFLOW_BACKEND \
                 --default-artifact-root $MLFLOW_ARTIFACT \
                 --host $MLFLOW_HOST -p $MLFLOW_PORT
-                
+
     ''')
     return template
 
@@ -292,7 +292,7 @@ def generate_main_file(app_dir, id_date):
     import sys
 
     path = '/home/guess/Desktop/autodeploy'
-    sys.path.append(path) 
+    sys.path.append(path)
 
     from autodeploy.setup import setup
     from autodeploy.run import run
@@ -302,16 +302,16 @@ def generate_main_file(app_dir, id_date):
 
     # Workflows
     workflow1 = [
-        {{'name': 'gathering-{id_date}', 'file': 'gathering.py', 
+        {{'name': 'gathering-{id_date}', 'file': 'gathering.py',
                 'env': 'gathering'}},
 
-        {{'name': 'preprocessing-{id_date}', 'file': 'preprocessing.py', 
-                'env': 'preprocessing'}}, 
+        {{'name': 'preprocessing-{id_date}', 'file': 'preprocessing.py',
+                'env': 'preprocessing'}},
 
     ]
     workflow2 = [
-        {{'name': 'modeling-{id_date}', 'file': 'modeling.py', 
-                'env': 'modeling'}}, 
+        {{'name': 'modeling-{id_date}', 'file': 'modeling.py',
+                'env': 'modeling'}},
 
 
     ]
@@ -621,7 +621,10 @@ def mlproject_template(environment, wflow_name):
 def format_parameters(params):
     list_params = list()
     for k, v in params.items():
-        list_params.append(f"--{k} {v}")
+        if isinstance(v, list):
+            list_params.append(f"--{k} {' '.join(v)}")
+        else:
+            list_params.append(f"--{k} {v}")
 
     return ' '.join(list_params)
 

@@ -1,0 +1,9 @@
+
+FROM continuumio/miniconda3
+
+RUN mkdir /app
+ADD req_gathering.txt /app
+ADD gathering.py /app
+WORKDIR /app
+RUN pip install -r req_gathering.txt
+
