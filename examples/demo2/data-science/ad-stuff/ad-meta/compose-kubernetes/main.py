@@ -3,7 +3,7 @@ import os
 import sys
 
 path = '/home/guess/Desktop/autodeploy'
-sys.path.append(path) 
+sys.path.append(path)
 
 from autodeploy.setup import setup
 from autodeploy.run import run
@@ -13,16 +13,16 @@ app_dir = '/home/guess/Desktop/autodeploy/examples/demo2/data-science/'
 
 # Workflows
 workflow1 = [
-    {'name': 'gathering-20200302165713', 'file': 'gathering.py', 
+    {'name': 'gathering-20200727181123', 'file': 'gathering.py',
             'env': 'gathering'},
 
-    {'name': 'preprocessing-20200302165713', 'file': 'preprocessing.py', 
-            'env': 'preprocessing'}, 
+    {'name': 'preprocessing-20200727181123', 'file': 'preprocessing.py',
+            'env': 'preprocessing'},
 
 ]
 workflow2 = [
-    {'name': 'modeling-20200302165713', 'file': 'modeling.py', 
-            'env': 'modeling'}, 
+    {'name': 'modeling-20200727181123', 'file': 'modeling.py',
+            'env': 'modeling'},
 
 
 ]
