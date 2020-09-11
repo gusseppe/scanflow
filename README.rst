@@ -1,5 +1,5 @@
 ==========
-autodeploy
+Scanflow
 ==========
 
 
@@ -11,12 +11,12 @@ autodeploy
         :alt: Documentation Status
 
 
-.. image:: https://github.com/gusseppe/autodeploy/blob/master/pictures/autodeploy.png
+.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/autodeploy.png
 
 
 Scalable library for end-to-end Machine Learning workflow management.
 
-Autodeploy is a high-level library that is built on top of MLflow and Docker to
+Scanflow is a high-level library that is built on top of MLflow and Docker to
 manage and supervise workflows efficiently. Its main goals are
 usability, integration for deployment and real-time checking.
 
@@ -120,4 +120,4 @@ Installation
 
 .. code-block:: bash
 
-    pip install autodeploy (not yet)
+    pip install scanflow (not yet)
