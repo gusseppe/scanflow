@@ -1,4 +1,4 @@
-Welcome to autodeploy's documentation!
+Welcome to scanflow's documentation!
 ======================================
 
 .. toctree::

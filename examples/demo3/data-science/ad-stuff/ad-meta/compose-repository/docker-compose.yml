@@ -10,8 +10,8 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo3/data-science/:/app
-    - /home/guess/Desktop/autodeploy/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo3/data-science/:/app
+    - /home/guess/Desktop/scanflow/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
     tty: 'true'
   modeling:
     image: modeling
@@ -23,8 +23,8 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo3/data-science/:/app
-    - /home/guess/Desktop/autodeploy/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo3/data-science/:/app
+    - /home/guess/Desktop/scanflow/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
     tty: 'true'
   tracker-workflow1:
     image: tracker-workflow1
@@ -32,7 +32,7 @@ services:
     networks:
     - network-workflow1
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo3/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
     ports:
     - 8006:8001
 networks:

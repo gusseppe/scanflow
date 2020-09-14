@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Tests for `autodeploy` package."""
+"""Tests for `scanflow` package."""
 
 
 import unittest
 
-from autodeploy import autodeploy
+from scanflow import scanflow
 
 
-class TestAutodeploy(unittest.TestCase):
-    """Tests for `autodeploy` package."""
+class Testscanflow(unittest.TestCase):
+    """Tests for `scanflow` package."""
 
     def setUp(self):
         """Set up test fixtures, if any."""

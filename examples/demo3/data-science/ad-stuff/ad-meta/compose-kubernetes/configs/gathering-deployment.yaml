@@ -22,7 +22,7 @@ spec:
       - env:
         - name: MLFLOW_TRACKING_URI
           value: http://tracker-workflow1:8001
-        image: autodeploy_registry/gathering
+        image: scanflow_registry/gathering
         imagePullPolicy: IfNotPresent
         name: gathering-20200117213243
         resources: {}
@@ -34,9 +34,9 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/autodeploy/examples/demo1/data-science
+          path: /home/guess/Desktop/scanflow/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/scanflow/examples/demo1/data-science
         name: gathering-hostpath0
       - hostPath:
-          path: /home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-tracker/tracker-workflow1
+          path: /home/guess/Desktop/scanflow/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/scanflow/examples/demo1/data-science/ad-stuff/ad-tracker/tracker-workflow1
         name: gathering-hostpath1
 status: {}

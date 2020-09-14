@@ -2,6 +2,6 @@
 Usage
 =====
 
-To use autodeploy in a project::
+To use scanflow in a project::
 
-    import autodeploy
+    import scanflow

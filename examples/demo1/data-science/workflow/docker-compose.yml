@@ -7,13 +7,13 @@ services:
     container_name: gathering_1
     networks:
       - network_workflow1
-    depends_on: 
+    depends_on:
       - tracker_workflow1
     environment:
       MLFLOW_TRACKING_URI: http://tracker_workflow1:8001
     volumes:
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose:/app"
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose:/app"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
     tty: true
 
   preprocessing:
@@ -21,13 +21,13 @@ services:
     container_name: preprocessing_1
     networks:
       - network_workflow1
-    depends_on: 
+    depends_on:
       - tracker_workflow1
     environment:
       MLFLOW_TRACKING_URI: http://tracker_workflow1:8001
     volumes:
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose:/app"
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose:/app"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
     tty: true
 
   modeling:
@@ -35,39 +35,39 @@ services:
     container_name: modeling_1
     networks:
       - network_workflow2
-    depends_on: 
+    depends_on:
       - tracker_workflow2
     environment:
       MLFLOW_TRACKING_URI: http://tracker_workflow2:8002
     volumes:
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose:/app"
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose/tracker_workflow2:/mlflow"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose:/app"
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose/tracker_workflow2:/mlflow"
     tty: true
 
   tracker_workflow1:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile_tracker_workflow1
     container_name: tracker_workflow1_1
     networks:
       - network_workflow1
     volumes:
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
-    ports: 
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose/tracker_workflow1:/mlflow"
+    ports:
       - "8005:8001"
 
   tracker_workflow2:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile_tracker_workflow2
     container_name: tracker_workflow2_1
     networks:
       - network_workflow2
-    depends_on: 
+    depends_on:
       - tracker_workflow1
     volumes:
-      - "/home/guess/Desktop/autodeploy/examples/leaf_ds_compose/tracker_workflow2:/mlflow"
-    ports: 
+      - "/home/guess/Desktop/scanflow/examples/leaf_ds_compose/tracker_workflow2:/mlflow"
+    ports:
      - "8006:8002"
 
 networks:

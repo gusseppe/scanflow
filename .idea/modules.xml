@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/autodeploy.iml" filepath="$PROJECT_DIR$/.idea/autodeploy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../scanflow/.idea/scanflow.iml" filepath="$PROJECT_DIR$/../scanflow/.idea/scanflow.iml" />
     </modules>
   </component>
 </project>

@@ -2,14 +2,14 @@
 import os
 import sys
 
-path = '/home/guess/Desktop/autodeploy'
+path = '/'
 sys.path.append(path)
 
-from autodeploy.setup import setup
-from autodeploy.run import run
+from scanflow.setup import setup
+from scanflow.run import run
 
 # App folder
-app_dir = '/home/guess/Desktop/autodeploy/examples/intel_openvino/data-science/'
+app_dir = '//examples/intel_openvino/data-science/'
 
 # Workflows
 workflow1 = [

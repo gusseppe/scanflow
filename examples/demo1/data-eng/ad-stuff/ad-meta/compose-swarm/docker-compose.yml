@@ -10,8 +10,8 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://tracker-workflow3:8003
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo1/data-eng/:/app
-    - /home/guess/Desktop/autodeploy/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo1/data-eng/:/app
+    - /home/guess/Desktop/scanflow/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
   preprocessing_eng:
     image: preprocessing_eng
     container_name: preprocessing_eng-20200122122623
@@ -22,15 +22,15 @@ services:
     environment:
       MLFLOW_TRACKING_URI: http://tracker-workflow3:8003
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo1/data-eng/:/app
-    - /home/guess/Desktop/autodeploy/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo1/data-eng/:/app
+    - /home/guess/Desktop/scanflow/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
   tracker-workflow3:
     image: tracker-workflow3
     container_name: tracker-workflow3-20200122122623
     networks:
     - network-workflow3
     volumes:
-    - /home/guess/Desktop/autodeploy/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo1/data-eng/ad-stuff/ad-tracker/tracker-workflow3:/mlflow
     ports:
     - 8008:8003
 networks:
