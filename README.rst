@@ -3,15 +3,15 @@ Scanflow
 ==========
 
 
-.. image:: https://img.shields.io/pypi/v/autodeploy.svg
-        :target: https://pypi.python.org/pypi/autodeploy
+.. image:: https://img.shields.io/pypi/v/scanflow.svg
+        :target: https://pypi.python.org/pypi/scanflow
 
-.. image:: https://readthedocs.org/projects/autodeploy/badge/?version=latest
-        :target: https://autodeploy.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/scanflow/badge/?version=latest
+        :target: https://scanflow.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 
-.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/autodeploy.png
+.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/scanflow.png
 
 
 Scalable library for end-to-end Machine Learning workflow management.
@@ -21,7 +21,7 @@ manage and supervise workflows efficiently. Its main goals are
 usability, integration for deployment and real-time checking.
 
 * Free software: MIT license
-* Documentation: https://autodeploy.readthedocs.io.
+* Documentation: https://scanflow.readthedocs.io.
 
 
 Features
@@ -42,11 +42,11 @@ Define your working folder and workflows.
 
 .. code-block:: python
 
-    from autodeploy.setup import setup
-    from autodeploy.run import run
+    from scanflow.setup import setup
+    from scanflow.run import run
 
     # App folder
-    app_dir = '/home/guess/Desktop/autodeploy/examples/demo2/data-science/'
+    app_dir = '/home/guess/Desktop/scanflow/examples/demo2/data-science/'
 
     # Workflows
 

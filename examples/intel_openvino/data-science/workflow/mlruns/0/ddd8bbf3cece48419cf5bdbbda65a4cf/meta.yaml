@@ -1,4 +1,4 @@
-artifact_uri: file:///home/guess/Desktop/autodeploy/examples/demo2/data-science/workflow/mlruns/0/ddd8bbf3cece48419cf5bdbbda65a4cf/artifacts
+artifact_uri: file:///home/guess/Desktop/scanflow/examples/demo2/data-science/workflow/mlruns/0/ddd8bbf3cece48419cf5bdbbda65a4cf/artifacts
 end_time: 1582568842331
 entry_point_name: ''
 experiment_id: '0'

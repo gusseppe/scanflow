@@ -1,4 +1,4 @@
-* autodeploy version:
+* scanflow version:
 * Python version:
 * Operating System:
 

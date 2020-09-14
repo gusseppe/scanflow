@@ -19,7 +19,7 @@ def gathering(raw_dataset, noise):
     with mlflow.start_run(run_name='gathering') as mlrun:
 
         # Your gathering code
-#         file = '/home/guess/Desktop/autodeploy/examples/demo3/data-science/workflow/leaf.csv'
+#         file = '/home/guess/Desktop/scanflow/examples/demo3/data-science/workflow/leaf.csv'
         names = ['species', 'specimen_number', 'eccentricity', 'aspect_ratio',
                 'elongation', 'solidity', 'stochastic_convexity', 'isoperimetric_factor',
                 'maximal_indentation_depth', 'lobedness', 'average_intensity',
@@ -38,7 +38,7 @@ def gathering(raw_dataset, noise):
 
         print('Testing', testing.shape)
         testing_noise = testing.copy()
-        
+
         testing_part = testing.loc[:, testing.columns != 'species'].sample(frac=0.5)
         noise = np.random.normal(0, noise, [len(testing_part),len(testing_part.columns)])
         df_noise = testing_part + noise
@@ -51,8 +51,8 @@ def gathering(raw_dataset, noise):
         print('New testing', new_testing.shape)
 
         training_noise = pd.concat([training, testing_noise.sample(10)])
-        print('new_training', training_noise.shape)      
-        
+        print('new_training', training_noise.shape)
+
         mlflow.log_param(key='n_rows_raw', value=len(df))
         print(df.head())
 
@@ -60,12 +60,12 @@ def gathering(raw_dataset, noise):
         training_noise.to_csv('training_noise.csv', index=False)
         new_testing.to_csv('testing.csv', index=False)
         testing_noise.to_csv('testing_noise.csv', index=False)
-        
+
         mlflow.log_artifact('training.csv')
         mlflow.log_artifact('training_noise.csv')
         mlflow.log_artifact('testing.csv')
         mlflow.log_artifact('testing_noise.csv')
-        
+
 
 if __name__ == '__main__':
     gathering()

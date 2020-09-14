@@ -1,13 +1,13 @@
 ==========
-autodeploy
+scanflow
 ==========
 
 
-.. image:: https://img.shields.io/pypi/v/autodeploy.svg
-        :target: https://pypi.python.org/pypi/autodeploy
+.. image:: https://img.shields.io/pypi/v/scanflow.svg
+        :target: https://pypi.python.org/pypi/scanflow
 
-.. image:: https://readthedocs.org/projects/autodeploy/badge/?version=latest
-        :target: https://autodeploy.readthedocs.io/en/latest/?badge=latest
+.. image:: https://readthedocs.org/projects/scanflow/badge/?version=latest
+        :target: https://scanflow.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
 
@@ -17,13 +17,13 @@ Scalable library for model management focus on degradation perfomance
 
 
 * Free software: MIT license
-* Documentation: https://autodeploy.readthedocs.io.
+* Documentation: https://scanflow.readthedocs.io.
 
 
 Features
 --------
 
-.. image:: https://github.com/gusseppe/autodeploy/blob/master/autodeploy6.png
+.. image:: https://github.com/gusseppe/scanflow/blob/master/scanflow6.png
 
 
 Credits

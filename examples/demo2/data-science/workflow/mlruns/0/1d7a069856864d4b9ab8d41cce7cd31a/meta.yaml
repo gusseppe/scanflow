@@ -1,0 +1,15 @@
+artifact_uri: file:///home/guess/Desktop/scanflow/examples/demo2/data-science/workflow/mlruns/0/1d7a069856864d4b9ab8d41cce7cd31a/artifacts
+end_time: 1599203805477
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: 1d7a069856864d4b9ab8d41cce7cd31a
+run_uuid: 1d7a069856864d4b9ab8d41cce7cd31a
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1599203805364
+status: 3
+tags: []
+user_id: guess

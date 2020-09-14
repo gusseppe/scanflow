@@ -44,7 +44,7 @@ def modeling(preprocessed_data, model_path, n_estimators, n_jobs):
         X_train, X_test, y_train, y_test = train_test_split(
                                 X, y, test_size=test_size, random_state=random_state)
 
-        # Later wrap the logs with autodeploy log_metadata
+        # Later wrap the logs with scanflow log_metadata
         X_train.to_csv('X_train.csv', index=False)
         mlflow.log_artifact('X_train.csv')
 

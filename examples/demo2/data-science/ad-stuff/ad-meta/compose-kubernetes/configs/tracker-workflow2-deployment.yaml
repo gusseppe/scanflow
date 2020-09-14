@@ -31,6 +31,6 @@ spec:
       restartPolicy: Always
       volumes:
       - hostPath:
-          path: /home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/autodeploy/examples/demo1/data-science/ad-stuff/ad-tracker/tracker-workflow2
+          path: /home/guess/Desktop/scanflow/examples/demo1/data-science/ad-stuff/ad-meta/compose-kubernetes/home/guess/Desktop/scanflow/examples/demo1/data-science/ad-stuff/ad-tracker/tracker-workflow2
         name: tracker-workflow2-hostpath0
 status: {}

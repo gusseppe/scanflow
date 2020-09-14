@@ -8,13 +8,13 @@ Installation
 Stable release
 --------------
 
-To install autodeploy, run this command in your terminal:
+To install scanflow, run this command in your terminal:
 
 .. code-block:: console
 
-    $ pip install autodeploy
+    $ pip install scanflow
 
-This is the preferred method to install autodeploy, as it will always install the most recent stable release.
+This is the preferred method to install scanflow, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
 you through the process.
@@ -26,19 +26,19 @@ you through the process.
 From sources
 ------------
 
-The sources for autodeploy can be downloaded from the `Github repo`_.
+The sources for scanflow can be downloaded from the `Github repo`_.
 
 You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/gusseppe/autodeploy
+    $ git clone git://github.com/gusseppe/scanflow
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/gusseppe/autodeploy/tarball/master
+    $ curl  -OL https://github.com/gusseppe/scanflow/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/gusseppe/autodeploy
-.. _tarball: https://github.com/gusseppe/autodeploy/tarball/master
+.. _Github repo: https://github.com/gusseppe/scanflow
+.. _tarball: https://github.com/gusseppe/scanflow/tarball/master

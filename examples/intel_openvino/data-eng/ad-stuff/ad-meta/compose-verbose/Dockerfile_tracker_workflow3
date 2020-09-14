@@ -1,6 +1,6 @@
 
 FROM continuumio/miniconda3
-LABEL maintainer='autodeploy'
+LABEL maintainer='scanflow'
 
 ENV MLFLOW_HOME  /mlflow
 ENV MLFLOW_HOST  0.0.0.0
