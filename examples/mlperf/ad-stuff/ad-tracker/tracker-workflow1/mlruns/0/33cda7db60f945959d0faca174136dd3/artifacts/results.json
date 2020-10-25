@@ -1,0 +1,23 @@
+{
+    "TestScenario.SingleStream": {
+        "accuracy": 62.5,
+        "count": 8,
+        "good_items": 5,
+        "mean": 0.026036560535430908,
+        "percentiles": {
+            "50.0": 0.017938971519470215,
+            "80.0": 0.036284160614013676,
+            "90.0": 0.04325680732727051,
+            "95.0": 0.04653742313385009,
+            "99.0": 0.04916191577911377,
+            "99.9": 0.0497524266242981
+        },
+        "qps": 34.48164339077802,
+        "took": 0.23200750350952148,
+        "total_items": 8
+    },
+    "cmdline": "Namespace(accuracy=True, backend='tensorflow', cache=0, count=None, data_format=None, dataset='imagenet_mobilenet', dataset_list=None, dataset_path='/mlperf/fake_imagenet', find_peak_performance=False, inputs=['input:0'], max_batchsize=32, max_latency=0.2, mlperf_conf='./mlperf.conf', model='/mlperf/models/mobilenet_v1_1.0_224_frozen.pb', model_name='mobilenet', output='/mlperf/output', outputs=['MobilenetV1/Predictions/Reshape_1:0'], profile='mobilenet-tf', qps=None, samples_per_query=20, scenario='SingleStream', threads=4, time=10, user_conf='user.conf')",
+    "runtime": "tensorflow",
+    "time": 1602502898,
+    "version": "2.3.0/v2.3.0-rc2-23-gb36436b087"
+}

@@ -1,0 +1,1 @@
+{'backend': 'pytorch', 'model': 'resnet50', 'device': 'cpu'}
