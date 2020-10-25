@@ -1,0 +1,16 @@
+Clearing caches.
+3
+STARTING RUN AT 2020-09-22 10:23:18 AM
+INFO:main:Namespace(accuracy=False, backend='tensorflow', cache=0, count=None, data_format=None, dataset='imagenet_mobilenet', dataset_list=None, dataset_path='/home/guess/Desktop/inference/vision/classification_and_detection/fake_imagenet', find_peak_performance=False, inputs=['input:0'], max_batchsize=32, max_latency=0.2, mlperf_conf='./mlperf.conf', model='/home/guess/Desktop/inference/vision/classification_and_detection/mobilenet_v1_1.0_224_frozen.pb', model_name='mobilenet', output='/output', outputs=['MobilenetV1/Predictions/Reshape_1:0'], profile='mobilenet-tf', qps=None, samples_per_query=None, scenario='SingleStream', threads=4, time=10, user_conf='user.conf')
+2020-09-22 10:23:19.685361: W tensorflow/stream_executor/platform/default/dso_loader.cc:59] Could not load dynamic library 'libcudart.so.10.1'; dlerror: libcudart.so.10.1: cannot open shared object file: No such file or directory
+2020-09-22 10:23:19.685432: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+INFO:imagenet:loaded 8 images, cache=0, took=0.1sec
+Traceback (most recent call last):
+  File "python/main.py", line 545, in <module>
+    main()
+  File "python/main.py", line 432, in main
+    model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
+  File "/mlperf/python/backend_tf.py", line 38, in load
+    with open(model_path, "rb") as f:
+FileNotFoundError: [Errno 2] No such file or directory: '/home/guess/Desktop/inference/vision/classification_and_detection/mobilenet_v1_1.0_224_frozen.pb'
+ENDING RUN AT 2020-09-22 10:23:21 AM

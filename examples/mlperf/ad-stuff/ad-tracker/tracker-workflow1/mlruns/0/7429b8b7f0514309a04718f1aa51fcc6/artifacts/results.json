@@ -1,0 +1,23 @@
+{
+    "TestScenario.SingleStream": {
+        "accuracy": 75.0,
+        "count": 8,
+        "good_items": 6,
+        "mean": 0.07324564456939697,
+        "percentiles": {
+            "50.0": 0.07191073894500732,
+            "80.0": 0.07504777908325196,
+            "90.0": 0.07884352207183837,
+            "95.0": 0.08235987424850463,
+            "99.0": 0.08517295598983764,
+            "99.9": 0.08580589938163757
+        },
+        "qps": 13.025662406226648,
+        "took": 0.6141722202301025,
+        "total_items": 8
+    },
+    "cmdline": "Namespace(accuracy=True, backend='tensorflow', cache=0, count=None, data_format=None, dataset='imagenet', dataset_list=None, dataset_path='/mlperf/fake_imagenet', find_peak_performance=False, inputs=['input_tensor:0'], max_batchsize=32, max_latency=0.2, mlperf_conf='./mlperf.conf', model='/mlperf/models/resnet50_v1.pb', model_name='resnet50', output='/mlperf/output', outputs=['ArgMax:0'], profile='resnet50-tf', qps=None, samples_per_query=20, scenario='SingleStream', threads=4, time=10, user_conf='user.conf')",
+    "runtime": "tensorflow",
+    "time": 1602503600,
+    "version": "2.3.0/v2.3.0-rc2-23-gb36436b087"
+}
