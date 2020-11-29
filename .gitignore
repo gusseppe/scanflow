@@ -93,17 +93,10 @@ ENV/
 .idea/
 
 # Stuff
-.stuff/
+stuff/
 
 # Jupyter
 .ipynb_checkpoints/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
 
 # mkdocs documentation
 /site
