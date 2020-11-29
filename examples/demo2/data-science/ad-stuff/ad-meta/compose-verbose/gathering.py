@@ -2,6 +2,7 @@ import mlflow
 import click
 import logging
 import pandas as pd
+import time
 
 
 @click.command(help="Gather an input data set")
@@ -12,6 +13,7 @@ import pandas as pd
 def gathering(raw_data_path, percentage):
     with mlflow.start_run(run_name='gathering') as mlrun:
 
+#    start = time.time()
         # Your gathering code
         names = ['species', 'specimen_number', 'eccentricity', 'aspect_ratio',
                 'elongation', 'solidity', 'stochastic_convexity', 'isoperimetric_factor',
@@ -26,6 +28,8 @@ def gathering(raw_data_path, percentage):
 
         df.to_csv('gathered.csv', index=False)
         mlflow.log_artifact('gathered.csv')
+#        end = time.time()
+#        print(f"Elapsed time {end-start}")
 
 
 if __name__ == '__main__':

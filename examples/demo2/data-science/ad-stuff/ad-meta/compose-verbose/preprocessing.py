@@ -4,6 +4,7 @@ import click
 import sklearn
 import logging
 import pandas as pd
+import time
 
 
 @click.command(help="Preprocess the gathered data set")
@@ -12,6 +13,7 @@ import pandas as pd
 def preprocessing(gathered_data):
     with mlflow.start_run(run_name='preprocessing') as mlrun:
 
+#        start = time.time()
         # Some preprocessing steps here
         df = pd.read_csv(gathered_data)
         df_cleaned = df.loc[:, df.columns != 'specimen_number'].copy()
@@ -29,6 +31,8 @@ def preprocessing(gathered_data):
         df_cleaned.to_csv('preprocessed_data.csv', index=False)
         mlflow.log_artifact('preprocessed_data.csv')
 
+#        end = time.time()
+#        print(f"{end-start}")
 
 if __name__ == '__main__':
     preprocessing()

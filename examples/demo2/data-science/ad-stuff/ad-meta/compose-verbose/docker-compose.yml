@@ -2,7 +2,7 @@ version: '3'
 services:
   gathering:
     image: gathering
-    container_name: gathering-20200904085656
+    container_name: gathering-20201129011504
     networks:
     - network-workflow1
     depends_on:
@@ -14,7 +14,7 @@ services:
     - /home/guess/Desktop/scanflow/examples/demo2/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
   preprocessing:
     image: preprocessing
-    container_name: preprocessing-20200904085656
+    container_name: preprocessing-20201129011504
     networks:
     - network-workflow1
     depends_on:
@@ -26,7 +26,7 @@ services:
     - /home/guess/Desktop/scanflow/examples/demo2/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
   tracker-workflow1:
     image: tracker-workflow1
-    container_name: tracker-workflow1-20200904085656
+    container_name: tracker-workflow1-20201129011504
     networks:
     - network-workflow1
     volumes:
