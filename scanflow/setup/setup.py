@@ -3,13 +3,17 @@
 # License: BSD 3 clause
 
 import docker
-import errno
+from typing import List, Dict
 import os
 import logging
-import pprint
-import json
 
 from scanflow import tools
+
+from scanflow.special.tracker import Tracker
+from scanflow.special.checker import Checker
+from scanflow.special.improver import Improver
+from scanflow.special.planner import Planner
+
 from textwrap import dedent
 from shutil import copy2
 
@@ -22,16 +26,14 @@ client = docker.from_env()
 
 class Setup:
     """
-       Setup the desired environment to work with.
+       Util class for setting up a workflow.
 
     """
 
     def __init__(self,
-                 app_dir=None,
-                 workflows=None,
-                 verbose=False,
-                 worker_file=None,
-                 n_workers=2):
+                 app_dir: str,
+                 workflows: List['Workflow'] = None,
+                 verbose: bool = False):
         # app_type='single'):
         """
         Example:
@@ -39,40 +41,23 @@ class Setup:
 
         Parameters:
             app_dir (str): Path to the application.
-            master_file (str): Path to a Dockerfile, cluster mode.
-            worker_file (str): Path to a Dockerfile, cluster mode.
-            n_workers (int): if app_type=='cluster' then it means the
-                             number of slaves (workers)
-            app_type (str): Type of environment.
+            workflows List[Workflow]: List of workflows.
+            verbose (bool): If set to true, each execution will be printed.
 
         """
         # self.app_type = app_type
         self.app_dir = app_dir
-        # self.ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
-        # self.ad_paths['ad_meta_dir'] = os.path.join(self.ad_stuff_dir, 'ad-meta')
-        # self.ad_paths['ad_tracker_dir'] = os.path.join(self.ad_stuff_dir, 'ad-tracker')
-        # self.ad_paths['ad_checker_dir ']= os.path.join(self.ad_stuff_dir, 'ad-checker')
-        # self.ad_paths['ad_checker_pred_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'predictions')
-        # self.ad_paths['ad_checker_model_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'model')
-        # self.ad_paths['ad_checker_scaler_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'scaler')
         self.ad_paths = tools.get_scanflow_paths(app_dir)
-
         self.workflows_user = [w.to_dict for w in workflows]
-        # self.workflows_user = workflows
         self.verbose = verbose
         tools.check_verbosity(verbose)
-        # self.master_file = master_file
-        # self.worker_file = worker_file
-        # self.n_workers = n_workers
-        # self.env_image_name = None
         self.workflows = list()  # Contains name, images, containers.
         self.registry = None
 
-    def run_pipeline(self):
-        self.build_workflows()
-        self.start_workflows()
-
-        return self
+    # def run_pipeline(self):
+    #     self.build_workflows()
+    #
+    #     return self
 
     def build_workflows(self):
         """
@@ -101,7 +86,7 @@ class Setup:
 
         for wf_user in self.workflows_user:
             logging.info(f"[++] Building workflow: [{wf_user['name']}].")
-            environments = self.build_workflow(wf_user)
+            environments = self.__build_workflow(wf_user)
             # environments, tracker = self.build_workflow(wf_user)
             logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
             workflow = {'name': wf_user['name'],
@@ -113,7 +98,7 @@ class Setup:
 
         tools.save_workflows(self.ad_paths, self.workflows)
 
-    def build_workflow(self, workflow):
+    def __build_workflow(self, workflow: dict):
         """
         Build a environment with Docker images.
 
@@ -212,178 +197,9 @@ class Setup:
 
         return environments
 
-    def start_workflows(self):
-        """
-        Start environments (Docker image)
-
-        Parameters:
-            name (str): Docker container name for dashbGoard.
-            port (dict): Dictionary describing ports to bind.
-                Example: {'8001/tcp': 8001}
-            tracker (bool): If a tracker should be activated.
-
-        Returns:
-            containers (object): Docker container.
-        """
-        for wflow_user in self.workflows_user:
-            logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
-            containers, tracker_ctn = self.start_workflow(wflow_user)
-            logging.info(f"[+] Workflow: [{wflow_user['name']}] was started successfully.")
-            # for w in self.workflows:
-            #     if w['name'] == wflow_user['name']:
-            #         for node in w['nodes']:
-            #             if
-            #         w.update({'ctns': containers + tracker_ctn})
-
-    def start_workflow(self, workflow):
-        """
-        Run an the environment (Docker image)
-
-        Parameters:
-            name (str): Docker container name for dashboard.
-            port (dict): Dictionary describing ports to bind.
-                Example: {'8001/tcp': 8001}
-            tracker (bool): If a tracker should be activated.
-
-        Returns:
-            containers (object): Docker container.
-        """
-
-        # Create network for workflow
-
-        net_name = f"network_{workflow['name']}"
-        tools.start_network(name=net_name)
-
-        containers = []
-        for wflow in workflow['executors']:
-
-            logging.info(f"[+] Starting env: [{workflow['name']}:{wflow['name']}].")
-            env_tag_name = f"{wflow['name']}"
-
-            if 'env' in wflow.keys():  # the provided image name exists in repository
-                env_image_name = f"{wflow['env']}"
-            else:
-                env_image_name = f"{wflow['name']}"
-
-            if 'tracker' in workflow.keys():
-                host_path = self.app_dir
-                container_path = '/app'
-
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
-
-                workflow_tracker_dir_ctn = '/mlflow'
-                volume = {host_path: {'bind': container_path, 'mode': 'rw'},
-                          workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
-                env_container = tools.start_image(image=env_image_name,
-                                                  name=env_tag_name,
-                                                  network=net_name,
-                                                  volume=volume, environment=env_var)
-            else:
-                host_path = self.app_dir
-                container_path = '/app'
-                volume = {host_path: {'bind': container_path, 'mode': 'rw'}}
-                env_container = tools.start_image(image=env_image_name,
-                                                  name=env_tag_name,
-                                                  network=net_name,
-                                                  volume=volume)
-
-            containers.append({'name': env_image_name, 'ctn': env_container})
-
-        if 'tracker' in workflow.keys():
-            workflow_tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
-            os.makedirs(workflow_tracker_dir, exist_ok=True)
-
-            # host_path = self.app_dir
-            container_path = '/mlflow'
-            volume = {workflow_tracker_dir: {'bind': container_path, 'mode': 'rw'}}
-
-            tracker_image_name = f"tracker-{workflow['name']}"
-            tracker_tag_name = f"tracker-{workflow['name']}"
-            logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
-            # try:
-            port = workflow['tracker']['port']
-            # ports = {f'{port}/tcp': port}
-            tracker_container = tools.start_image(image=tracker_image_name,
-                                                  name=tracker_tag_name,
-                                                  network=net_name,
-                                                  volume=volume,
-                                                  port=port)
-            # tracker_container = client.containers.run(image=tracker_image_name,
-            #                                           name=tracker_image_name,
-            #                                           tty=True, detach=True,
-            #                                           ports=ports)
-
-            tracker_container = {'name': tracker_image_name,
-                                 'ctn': tracker_container, 'port': port}
-            return containers, [tracker_container]
-
-            # except docker.api.client.DockerException as e:
-            #     logging.error(f"{e}")
-            #     logging.error(f"Tracker running failed.")
-
-        return containers, [None]
-
-    def stop_workflows(self, tracker=True, network=True):
-        """
-        Stop containers in each workflow but not the trackers.
-
-        """
-        for wflow in self.workflows_user:
-            self.stop_workflow(wflow, tracker, network)
-
-    def stop_workflow(self, workflow, tracker, network):
-
-        for wflow in workflow['executors']:
-            try:
-                container_from_env = client.containers.get(wflow['name'])
-                container_from_env.stop()
-                container_from_env.remove()
-                logging.info(f"[+] Environment: [{wflow['name']}] was stopped successfully.")
-
-            except docker.api.client.DockerException as e:
-                # logging.error(f"{e}")
-                logging.info(f"[+] Environment: [{wflow['name']}] is not running in local.")
-
-        if tracker:
-            if 'tracker' in workflow.keys():
-                tracker_image_name = f"tracker-{workflow['name']}"
-                try:
-                    container_from_env = client.containers.get(tracker_image_name)
-                    container_from_env.stop()
-                    container_from_env.remove()
-                    logging.info(f"[+] Tracker: [{tracker_image_name}] was stopped successfully.")
-
-                except docker.api.client.DockerException as e:
-                    # logging.error(f"{e}")
-                    logging.info(f"[+] Tracker: [{tracker_image_name}] is not running in local.")
-
-        client.containers.prune()
-        logging.info(f'[+] Stopped containers were pruned.')
-
-        if network:
-            net_name = f"network_{workflow['name']}"
-            try:
-                net_from_env = client.networks.get(net_name)
-                # net_from_env.stop()
-                net_from_env.remove()
-                logging.info(f"[+] Network: [{net_name}] was stopped successfully.")
-                client.networks.prune()
-                logging.info(f"[+] Removed network was pruned.")
-
-            except docker.api.client.DockerException as e:
-                # logging.error(f"{e}")
-                logging.info(f"[+] Network: [{net_name}] is not running in local.")
-
-        # for wflow in self.workflows:
-        #     if wflow['name'] == name:
-        #         for ctn in wflow['ctns']:
-        #             ctn['ctn'].stop()
-        #             logging.info(f"[+] Container {ctn['ctn'].name} was stopped.")
 
     def __repr__(self):
-        workflows_names = [d['name'] for d in self.workflows]
+        workflows_names = [d['name'] for d in self.workflows_user]
         _repr = dedent(f"""
         Setup = (
             Workflows: {workflows_names}
@@ -391,11 +207,16 @@ class Setup:
         """)
         return _repr
 
-    def draw_workflow(self, name='graph'):
+    def draw_workflow(self, name:str = 'graph'):
+        # for wf_user in self.workflows_user:
+        #     workflow = {'name': wf_user['name'],
+        #                 'nodes': wf_user['executors']}
+        #     self.workflows.append(workflow)
+
         graph = tools.workflow_to_graph(self.workflows, name)
         tools.draw_graph(graph)
 
-    def save_envs(self, registry_name):
+    def save_envs(self, registry_name: str):
         """
         Run an image that yields a environment.
 
@@ -442,19 +263,22 @@ class Node(object):
         Abstract base Node class.
 
     """
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
 
 
 class Executor(Node):
+    """
+        Minimal unit of execution.
 
+    """
     def __init__(self,
-                 name=None,
-                 file=None,
-                 parameters=None,
-                 requirements=None,
-                 dockerfile=None,
-                 env=None):
+                 name: str = None,
+                 file: str = None,
+                 parameters: dict = None,
+                 requirements: str = None,
+                 dockerfile: str = None,
+                 env: str = None):
 
         super(Executor, self).__init__(name=name)
         self.file = file
@@ -473,31 +297,52 @@ class Executor(Node):
         return tmp_dict
 
 
-class Tracker(Node):
-
-    def __init__(self,
-                 name=None,
-                 port=None):
-
-        super(Tracker, self).__init__(name=name)
-        self.port = port
-        self._to_dict = locals()
-
-    @property
-    def to_dict(self):
-        tmp_dict = self._to_dict
-        tmp_dict.pop('self', None)
-        tmp_dict.pop('__class__', None)
-        tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
-        return tmp_dict
+# class Tracker(Node):
+#
+#     def __init__(self,
+#                  name:str = None,
+#                  port:int = 8001):
+#
+#         super(Tracker, self).__init__(name=name)
+#         self.port = self.choose_port(port)
+#         self._to_dict = locals()
+#
+#     def check_port_in_use(self, port: int):
+#         import socket
+#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+#             return s.connect_ex(('localhost', port)) == 0
+#
+#     def choose_port(self, port: int):
+#         n_trials = 3
+#         for i in range(n_trials+1):
+#             chosen_port = port+i
+#             if self.check_port_in_use(chosen_port):
+#                 logging.info(f"[+] Port {chosen_port} is in use. Trying next port.")
+#                 continue
+#             else:
+#                 logging.info(f"[+] Port {chosen_port} is set successfully.")
+#                 return chosen_port
+#
+#         raise ValueError(f'[+] {n_trials} additional ports are in use. Please select another one.')
+#
+#     @property
+#     def to_dict(self):
+#         tmp_dict = self._to_dict
+#         tmp_dict.pop('self', None)
+#         tmp_dict.pop('__class__', None)
+#         tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
+#         return tmp_dict
 
 
 class Workflow(object):
     def __init__(self,
-                 name=None,
-                 executors=None,
-                 tracker=None,
-                 parallel=False):
+                 name: str = None,
+                 executors: List[Executor] = None,
+                 tracker: Tracker = None,
+                 checker: Checker = None,
+                 improver: Improver = None,
+                 planner: Planner = None,
+                 parallel: bool = False):
 
         self.name = name
         self._executors = executors

@@ -89,6 +89,15 @@ venv/
 venv2/
 ENV/
 
+# Pycharm project
+.idea
+
+# Stuff
+.stuff
+
+# Jupyter
+.ipynb_checkpoints
+
 # Spyder project settings
 .spyderproject
 .spyproject

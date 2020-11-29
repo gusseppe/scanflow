@@ -1,0 +1,61 @@
+version: '3'
+services:
+  mlperf-tf-resnet:
+    image: mlperf-tf-resnet
+    container_name: mlperf-tf-resnet-20201026094601
+    networks:
+    - network-workflow1
+    depends_on:
+    - tracker-workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/mlperf/:/app
+    - /home/guess/Desktop/scanflow/examples/mlperf/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+  mlperf-pytorch-resnet:
+    image: mlperf-pytorch-resnet
+    container_name: mlperf-pytorch-resnet-20201026094601
+    networks:
+    - network-workflow1
+    depends_on:
+    - tracker-workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/mlperf/:/app
+    - /home/guess/Desktop/scanflow/examples/mlperf/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+  mlperf-tf-mobilenet:
+    image: mlperf-tf-mobilenet
+    container_name: mlperf-tf-mobilenet-20201026094601
+    networks:
+    - network-workflow1
+    depends_on:
+    - tracker-workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/mlperf/:/app
+    - /home/guess/Desktop/scanflow/examples/mlperf/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+  mlperf-tflite-mobilenet:
+    image: mlperf-tflite-mobilenet
+    container_name: mlperf-tflite-mobilenet-20201026094601
+    networks:
+    - network-workflow1
+    depends_on:
+    - tracker-workflow1
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/mlperf/:/app
+    - /home/guess/Desktop/scanflow/examples/mlperf/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+  tracker-workflow1:
+    image: tracker-workflow1
+    container_name: tracker-workflow1-20201026094601
+    networks:
+    - network-workflow1
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/mlperf/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
+    ports:
+    - 8006:8001
+networks:
+  network_workflow1: null

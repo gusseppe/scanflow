@@ -437,7 +437,7 @@ def build_image(name, dockerfile_dir, dockerfile_path,
         logging.error(f"[-] Image building failed.", exc_info=True)
 
 
-def start_image(image, name, network=None, volume=None, port=None, environment=None):
+def start_image(image, name, network=None, **kwargs):
 
     container_from_env = None
 
@@ -457,48 +457,12 @@ def start_image(image, name, network=None, volume=None, port=None, environment=N
     try:
 
         if container_from_env is None:  # does not exist in repo
-            if (volume is not None) and (port is None):
-                if environment is not None:
-                    env_container = client.containers.run(image=image, name=name,
-                                                          network=network,
-                                                          tty=True, detach=True,
-                                                          volumes=volume, environment=environment)
-
-                    # logging.info(f'[+] Container [{name}] was built successfully.')
-                    logging.info(f'[+] Environment: [{name}] was started successfully with tracker')
-                else:
-                    env_container = client.containers.run(image=image, name=name,
-                                                          network=network,
-                                                          tty=True, detach=True,
-                                                          volumes=volume)
-
-                    # logging.info(f'[+] Container [{name}] was built successfully.')
-                    logging.info(f'[+] Environment: [{name}] was started successfully')
-
-                # self.env_image = image[0]
-                # environments.append({name: {'image': image[0]}})
-                return env_container
-
-            elif (volume is not None) and (port is not None):
-                ports = {f'{port}/tcp': port}
-                # tracker_image_name = f"tracker_{workflow['name']}"
-                tracker_container = client.containers.run(image=image, name=name,
-                                                          network=network,
-                                                          tty=True, detach=True,
-                                                          ports=ports, volumes=volume)
-                logging.info(f'[+] Tracker: [{name}] was started successfully')
-
-                return tracker_container
-            elif port is not None and volume is None and environment is None:
-                port_predictor_ctn = 8080
-                ports = {f'{port_predictor_ctn}/tcp': port}
-                # tracker_image_name = f"tracker_{workflow['name']}"
-                predictor = client.containers.run(image=image, name=name,
+            env_container = client.containers.run(image=image, name=name,
+                                                  network=network,
                                                   tty=True, detach=True,
-                                                  ports=ports)
-                logging.info(f'[+] Predictor: [{name}] was started successfully')
+                                                  **kwargs)
 
-                return predictor
+            return env_container
         else:
             logging.warning(f'[+] Environment: [{name}] is already running.')
             # logging.info(f'[+] Image [{name}] was loaded successfully.')
@@ -519,13 +483,6 @@ def start_network(name):
 
     try:
         net_from_env = client.networks.get(name)
-
-        # if container_from_env.status == 'exited':
-        #     container_from_env.stop()
-        #     container_from_env.remove()
-        #     container_from_env = None
-        # return {'name': name, 'ctn': container_from_env}
-        # return container_from_env
 
     except docker.api.client.DockerException as e:
         # logging.error(f"{e}")
@@ -713,8 +670,10 @@ def run_step(step):
         env_container = client.containers.get(env_name)
         if 'parameters' in step.keys():
             cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
+            # result = env_container.exec_run(cmd=cmd,
+            #                                 workdir='/app/workflow')
             result = env_container.exec_run(cmd=cmd,
-                                            workdir='/app/workflow')
+                                            workdir='/mlperf')
         else:
             result = env_container.exec_run(cmd=f"python {step['file']}",
                                             workdir='/app/workflow')
@@ -826,5 +785,8 @@ def draw_graph(graph):
     pos = nx.spectral_layout(G)
     color_nodes = {**parent_nodes, **rest_nodes}
     color_map = [color_nodes[node] for node in G.nodes()]
+    fig = plt.figure()
+    fig.add_subplot(1, 1, 1)
+    plt.title("Workflow")
     nx.draw(G, pos, node_color=color_map, with_labels = True, arrows=True)
     plt.show()

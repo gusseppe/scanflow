@@ -118,10 +118,15 @@ def scale2(df):
     tf.random.set_seed(42)
 
     scaler = MinMaxScaler()
-    X = pd.DataFrame(scaler.fit_transform(df),
-                         columns=df.columns,
-                         index=df.index)
 
+    # if df.shape[1] == 1:
+    #     X = pd.DataFrame(scaler.fit_transform(df.values.reshape(-1, 1)),
+    #                          columns=df.columns,
+    #                          index=df.index)
+    # else:
+    X = pd.DataFrame(scaler.fit_transform(df),
+                     columns=df.columns,
+                     index=df.index)
     return X
 
 def get_loss(model, X):
@@ -174,6 +179,9 @@ def get_checker(X_train, X_test, ad_paths, date=None):
     np.random.seed(42)
     tf.random.set_seed(42)
 
+    X_train = X_train.copy()
+    X_test = X_test.copy()
+
     if date is not None:
         range_periods = X_train.shape[0] + X_test.shape[0]
         concat_indexes = pd.date_range(date, freq="0.1ms",
@@ -181,6 +189,8 @@ def get_checker(X_train, X_test, ad_paths, date=None):
 
         X_train.index = concat_indexes[:len(X_train)]
         X_test.index = concat_indexes[len(X_train):]
+
+    X_test_orignal = X_test.copy()
 
     X_train = scale(ad_paths['ad_checker_scaler_dir'], X_train)
     X_test = scale(ad_paths['ad_checker_scaler_dir'], X_test)
@@ -224,14 +234,19 @@ def get_checker(X_train, X_test, ad_paths, date=None):
 
     E_full = pd.concat([E_train, E_test], sort=False)
     E_full['Threshold'] = NAIVE_THRESHOLD
+
+    X_test_orignal['Anomaly'] = E_test['Loss_mae'] > NAIVE_THRESHOLD
     # E_full.plot(logy=True,  figsize = (10,6), ylim = [1e-2,1e2], color = ['blue','red']);
 
-    return ddae_model, E_full, E_test, X_test
+    return ddae_model, E_full, E_test, X_test_orignal
 
 
 def get_checker2(X_train, X_test, date=None):
     np.random.seed(42)
     tf.random.set_seed(42)
+
+    X_train = X_train.copy()
+    X_test = X_test.copy()
 
     if date is not None:
         range_periods = X_train.shape[0] + X_test.shape[0]
@@ -267,7 +282,7 @@ def get_checker2(X_train, X_test, date=None):
     E_train = get_loss(ddae_model, X_train)
 
     # Define threshold
-    MAX_LOSS_MAE = E_train['Loss_mae'].max()
+    MAX_LOSS_MAE = E_train['Loss_mae'].max()*0.9
     DELTA_LOSS = E_train['Loss_mae'].max()*0.01
     NAIVE_THRESHOLD = MAX_LOSS_MAE + DELTA_LOSS
 

@@ -6,12 +6,10 @@ import logging
 import subprocess
 import os
 import docker
-import mlflow
 import requests
-import json
 import datetime
-import pandas as pd
 
+from shutil import copy2
 from tqdm import tqdm
 from scanflow import tools
 from textwrap import dedent
@@ -25,7 +23,10 @@ client = docker.from_env()
 
 
 class Deploy:
-    def __init__(self, app_dir=None, workflower=None, verbose=True):
+    def __init__(self,
+                 app_dir=None,
+                 workflower=None,
+                 verbose=True):
         """
         Example:
             deployer = Deploy(platform)
@@ -66,7 +67,145 @@ class Deploy:
 
         return self
 
-    def start_workflows(self):
+    def build_workflows(self):
+        """
+        Build a environment with Docker images.
+
+        Parameters:
+            mlproject_name (str): Prefix of a Docker image.
+        Returns:
+            image (object): Docker image.
+        """
+
+        # Create scanflow directories for stuff
+
+        os.makedirs(self.ad_paths['ad_meta_dir'], exist_ok=True)
+        os.makedirs(self.ad_paths['ad_tracker_dir'], exist_ok=True)
+        os.makedirs(self.ad_paths['ad_checker_dir'], exist_ok=True)
+        os.makedirs(self.ad_paths['ad_checker_pred_dir'], exist_ok=True)
+        os.makedirs(self.ad_paths['ad_checker_model_dir'], exist_ok=True)
+        os.makedirs(self.ad_paths['ad_checker_scaler_dir'], exist_ok=True)
+
+        compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
+        for c_type in compose_types:
+            compose_path = tools.generate_compose(self.ad_paths,
+                                                  self.workflows_user,
+                                                  compose_type=c_type)
+
+        for wf_user in self.workflows_user:
+            logging.info(f"[++] Building workflow: [{wf_user['name']}].")
+            environments = self.build_workflow(wf_user)
+            # environments, tracker = self.build_workflow(wf_user)
+            logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
+            workflow = {'name': wf_user['name'],
+                        'nodes': environments}
+            # 'type': 'execution node',
+            # 'tracker': tracker}
+
+            self.workflows.append(workflow)
+
+        tools.save_workflows(self.ad_paths, self.workflows)
+
+    def build_workflow(self, workflow: dict):
+        """
+        Build a environment with Docker images.
+
+        Parameters:
+            workflow (dict): Prefix of a Docker image.
+        Returns:
+            image (object): Docker image.
+        """
+
+        environments = []
+        for wflow in workflow['executors']:
+            # mlproject_path = tools.generate_mlproject(self.app_dir,
+            #                                           environment=wflow,
+            #                                           wflow_name=workflow['name'])
+
+            # compose_path = tools.generate_compose(self.app_dir,
+            #                                       environment=wflow,
+            #                                       wflow=workflow)
+
+            logging.info(f"[+] Building env: [{workflow['name']}:{wflow['name']}].")
+            # if self.app_type == 'single':
+
+            env_image_name = f"{wflow['name']}"
+
+            # Save each python file to compose-verbose folder
+            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            source = os.path.join(self.app_dir, 'workflow', wflow['file'])
+            copy2(source, meta_compose_dir)
+
+            # Create Dockerfile if needed
+            if 'requirements' in wflow.keys():
+                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+                # os.makedirs(meta_compose_dir, exist_ok=True)
+
+                # dockerfile_path = tools.generate_dockerfile(meta_compose_dir, environment=wflow)
+                dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
+                                                            executor=wflow,
+                                                            dock_type='executor',
+                                                            port=None)
+                source = os.path.join(self.app_dir, 'workflow', wflow['requirements'])
+                copy2(source, meta_compose_dir)
+                # metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
+                metadata = tools.build_image(env_image_name, meta_compose_dir, dockerfile_path)
+                environments.append(metadata)
+
+            elif 'dockerfile' in wflow.keys():
+                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                # os.makedirs(meta_compose_dir, exist_ok=True)
+
+                dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+                dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
+                copy2(dockerfile_path, meta_compose_dir)
+                metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
+                environments.append(metadata)
+
+            elif 'env' in wflow.keys():  # the provided image name exists in repository
+                try:
+                    env_name_from_repo = wflow['env']
+                    # env_tag = wflow['name']
+
+                    image_from_repo = client.images.get(env_name_from_repo)
+                    # environments.append({'name': env_image_name,
+                    #                      'image': image_from_repo,
+                    #                      'type': 'executor',
+                    #                      'port': None})
+                    environments.append({'name': env_image_name,
+                                         'image': image_from_repo.tags,
+                                         'type': 'executor'})
+
+                except docker.api.client.DockerException as e:
+                    # logging.error(f"{e}")
+                    logging.info(f"[-] Image not found in repository. Please change image name.")
+
+        if 'tracker' in workflow.keys():
+            port = workflow['tracker']['port']
+            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            # os.makedirs(meta_compose_dir, exist_ok=True)
+            # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+            dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
+                                                        executor=workflow,
+                                                        dock_type='tracker',
+                                                        port=port)
+            # copy2(dockerfile_path, meta_compose_dir)
+
+            tracker_image_name = f"tracker-{workflow['name']}"
+            tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
+            metadata = tools.build_image(tracker_image_name, meta_compose_dir,
+                                         dockerfile_path, 'tracker', port, tracker_dir)
+            # metadata = tools.build_image(tracker_image_name, self.app_dir,
+            #                              dockerfile_path, 'tracker', port)
+            environments.append(metadata)
+
+            # return environments, tracker_image
+            return environments
+
+        return environments
+
+    def start_workflows(self, **kwargs):
         """
         Start environments (Docker image)
 
@@ -82,7 +221,7 @@ class Deploy:
         if self.workflows_user is not None:
             for wflow_user in tqdm(self.workflows_user):
                 logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
-                containers, tracker_ctn = self.start_workflow(wflow_user)
+                containers, tracker_ctn = self.start_workflow(wflow_user, **kwargs)
                 logging.info(f"[+] Workflow: [{wflow_user['name']}] was started successfully.")
                 # for w in self.workflows:
                 #     if w['name'] == wflow_user['name']:
@@ -92,7 +231,7 @@ class Deploy:
         else:
             raise ValueError('You must provide a workflow.')
 
-    def start_workflow(self, workflow):
+    def start_workflow(self, workflow, **kwargs):
         """
         Run an the environment (Docker image)
 
@@ -129,22 +268,48 @@ class Deploy:
                 workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
 
                 workflow_tracker_dir_ctn = '/mlflow'
-                volume = {host_path: {'bind': container_path, 'mode': 'rw'},
-                          workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+
 
                 env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
+
+                if 'volumes' in kwargs:
+                    volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                    kwargs['volumes'].update(volumes)
+                else:
+                    volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                               workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                    kwargs['volumes'] = volumes
+
+                if 'environment' in kwargs:
+                    kwargs['environment'].update(env_var)
+                else:
+                    kwargs['environment'] = env_var
+
+                # print(kwargs)
+                # env_container = tools.start_image(image=env_image_name,
+                #                                   name=env_tag_name,
+                #                                   network=net_name,
+                #                                   volume=volumes, environment=env_var)
                 env_container = tools.start_image(image=env_image_name,
                                                   name=env_tag_name,
                                                   network=net_name,
-                                                  volume=volume, environment=env_var)
+                                                  **kwargs)
             else:
                 host_path = self.app_dir
                 container_path = '/app'
-                volume = {host_path: {'bind': container_path, 'mode': 'rw'}}
+
+                if 'volumes' not in kwargs:
+                    volumes = {host_path: {'bind': container_path, 'mode': 'rw'}}
+                    kwargs['volumes'] = volumes
+
+                # env_container = tools.start_image(image=env_image_name,
+                #                                   name=env_tag_name,
+                #                                   network=net_name,
+                #                                   volume=volumes)
                 env_container = tools.start_image(image=env_image_name,
                                                   name=env_tag_name,
                                                   network=net_name,
-                                                  volume=volume)
+                                                  **kwargs)
 
             containers.append({'name': env_image_name, 'ctn': env_container})
 
@@ -154,26 +319,39 @@ class Deploy:
 
             # host_path = self.app_dir
             container_path = '/mlflow'
-            volume = {workflow_tracker_dir: {'bind': container_path, 'mode': 'rw'}}
+            volumes = {workflow_tracker_dir: {'bind': container_path, 'mode': 'rw'}}
 
             tracker_image_name = f"tracker-{workflow['name']}"
             tracker_tag_name = f"tracker-{workflow['name']}"
-            logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
+            logging.info(f"[+] Starting image: [{tracker_image_name}.")
+            # logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
             # try:
             port = workflow['tracker']['port']
-            # ports = {f'{port}/tcp': port}
+            ports = {f"{port}/tcp": port}
+
+            if 'volumes' in kwargs:
+                kwargs['volumes'].update(volumes)
+            else:
+                kwargs['volumes'] = volumes
+
+            if 'ports' in kwargs:
+                kwargs['ports'].update(ports)
+            else:
+                kwargs['ports'] = ports
+
             tracker_container = tools.start_image(image=tracker_image_name,
                                                   name=tracker_tag_name,
                                                   network=net_name,
-                                                  volume=volume,
-                                                  port=port)
-            # tracker_container = client.containers.run(image=tracker_image_name,
-            #                                           name=tracker_image_name,
-            #                                           tty=True, detach=True,
-            #                                           ports=ports)
+                                                  **kwargs)
+
+            # tracker_container = tools.start_image(image=tracker_image_name,
+            #                                       name=tracker_tag_name,
+            #                                       network=net_name,
+            #                                       volume=volume,
+            #                                       port=port)
 
             tracker_container = {'name': tracker_image_name,
-                                 'ctn': tracker_container, 'port': port}
+                                 'ctn': tracker_container, 'port': workflow['tracker']['port']}
             return containers, [tracker_container]
 
             # except docker.api.client.DockerException as e:
@@ -356,12 +534,24 @@ class Deploy:
             # image = image_name
         logging.info(f"[++] Running predictor [{name}].")
 
+        port_predictor_ctn = 8080
+        ports = {f'{port_predictor_ctn}/tcp': port}
+
         env_container = tools.start_image(image=image,
                                           name=name,
-                                          port=port)
+                                          ports=ports)
         self.predictor_repr.update({'ctn': env_container, 'port': port})
 
         logging.info(f"[+] Predictor API at [http://localhost:{port}]. ")
+
+    def draw_workflow(self, name:str = 'graph'):
+        # for wf_user in self.workflows_user:
+        #     workflow = {'name': wf_user['name'],
+        #                 'nodes': wf_user['executors']}
+        #     self.workflows.append(workflow)
+
+        graph = tools.workflow_to_graph(self.workflows, name)
+        tools.draw_graph(graph)
 
     def __repr__(self):
         if self.predictor_repr is not None:
