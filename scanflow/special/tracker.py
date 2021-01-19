@@ -29,10 +29,10 @@ class Tracker(Node):
         for i in range(n_trials+1):
             chosen_port = port+i
             if self.check_port_in_use(chosen_port):
-                logging.info(f"[+] Port {chosen_port} is in use. Trying next port.")
+                logging.info(f"[Tracker] Port {chosen_port} is in use. Trying next port.")
                 continue
             else:
-                logging.info(f"[+] Port {chosen_port} is set successfully.")
+                logging.info(f"[Tracker] Port {chosen_port} is set successfully.")
                 return chosen_port
 
         raise ValueError(f'[+] {n_trials} additional ports are in use. Please select another one.')

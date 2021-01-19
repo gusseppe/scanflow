@@ -79,6 +79,8 @@ class Deploy:
 
         # Create scanflow directories for stuff
 
+        self.workflows = list()
+
         os.makedirs(self.ad_paths['ad_meta_dir'], exist_ok=True)
         os.makedirs(self.ad_paths['ad_tracker_dir'], exist_ok=True)
         os.makedirs(self.ad_paths['ad_checker_dir'], exist_ok=True)
@@ -94,7 +96,7 @@ class Deploy:
 
         for wf_user in self.workflows_user:
             logging.info(f"[++] Building workflow: [{wf_user['name']}].")
-            environments = self.build_workflow(wf_user)
+            environments = self.__build_workflow(wf_user)
             # environments, tracker = self.build_workflow(wf_user)
             logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
             workflow = {'name': wf_user['name'],
@@ -106,7 +108,7 @@ class Deploy:
 
         tools.save_workflows(self.ad_paths, self.workflows)
 
-    def build_workflow(self, workflow: dict):
+    def __build_workflow(self, workflow: dict):
         """
         Build a environment with Docker images.
 
@@ -552,6 +554,43 @@ class Deploy:
 
         graph = tools.workflow_to_graph(self.workflows, name)
         tools.draw_graph(graph)
+
+    def draw_workflow2(self, name:str = 'graph'):
+        import networkx as nx
+        import matplotlib.pyplot as plt
+
+        G = nx.Graph()
+
+        H = nx.Graph()
+        H.add_edges_from([('Tracker', 'Checker'), ('Tracker', 'Improver'),
+                          ('Improver', 'Planner'), ('Checker', 'Improver')])
+
+        I = nx.Graph()
+        I.add_edges_from([("preprocessing", "gathering")])
+
+        G.add_edge(H, I)
+
+        Gpos = nx.spring_layout(G, scale=0.4, seed=1)
+        Hpos = nx.circular_layout(H)
+        Ipos = nx.circular_layout(I)
+
+        scalefactor = 0.1
+        for node in H.nodes():
+            Hpos[node] = Hpos[node] * scalefactor + Gpos[H]
+
+        for node in I.nodes():
+            Ipos[node] = Ipos[node] * scalefactor + Gpos[I]
+
+        plt.figure(1, figsize=(10, 10))
+        nx.draw_networkx_edges(G, pos=Gpos)
+        nx.draw_networkx_nodes(G, pos=Gpos, node_color='b',
+                               node_size=30000, alpha=0.3)
+        nx.draw_networkx_labels(G, pos=Gpos)
+
+        nx.draw(H, pos=Hpos, with_labels=True)
+        nx.draw(I, pos=Ipos, with_labels=True)
+        plt.show()
+
 
     def __repr__(self):
         if self.predictor_repr is not None:

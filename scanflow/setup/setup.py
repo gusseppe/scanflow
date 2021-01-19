@@ -347,6 +347,10 @@ class Workflow(object):
         self.name = name
         self._executors = executors
         self._tracker = tracker
+        self._checker = checker
+        self._improver = improver
+        self._planner = planner
+
         self.parallel = parallel
         self._to_dict = locals()
 
@@ -374,6 +378,14 @@ class Workflow(object):
                             'Found: ' + str(self._tracker[0]))
 
     @property
+    def checker(self):
+        if self._checker and isinstance(self._checker, Checker):
+            return self._checker
+        else:
+            raise TypeError('The added tracker must be '
+                            'an instance of class Checker. '
+                            'Found: ' + str(self._checker[0]))
+    @property
     def to_dict(self):
         tmp_dict = self._to_dict
         tmp_dict.pop('self', None)
@@ -383,8 +395,11 @@ class Workflow(object):
             if k == 'executors':
                 for executor in v:
                     executors_list.append(executor.to_dict)
-            elif k == 'tracker':
+            if k == 'tracker':
                 tmp_dict[k] = v.to_dict
+            if k == 'checker':
+                tmp_dict[k] = v.to_dict
+
         tmp_dict['executors'] = executors_list
 
         return tmp_dict
