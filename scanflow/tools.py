@@ -672,8 +672,10 @@ def run_step(step):
             cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
             # result = env_container.exec_run(cmd=cmd,
             #                                 workdir='/app/workflow')
+            # result = env_container.exec_run(cmd=cmd,
+            #                                 workdir='/mlperf')
             result = env_container.exec_run(cmd=cmd,
-                                            workdir='/mlperf')
+                                            workdir='/app/workflow')
         else:
             result = env_container.exec_run(cmd=f"python {step['file']}",
                                             workdir='/app/workflow')
