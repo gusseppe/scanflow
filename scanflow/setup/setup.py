@@ -296,42 +296,17 @@ class Executor(Node):
         tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
         return tmp_dict
 
+    def __repr__(self):
+        # workflows_names = [d['name'] for d in self.workflows_user]
+        _repr = self.name
+        # _repr = dedent(f"""
+        # Executor = (
+        #     Name: {self.name}
+        # )
+        # """)
+        return _repr
 
-# class Tracker(Node):
-#
-#     def __init__(self,
-#                  name:str = None,
-#                  port:int = 8001):
-#
-#         super(Tracker, self).__init__(name=name)
-#         self.port = self.choose_port(port)
-#         self._to_dict = locals()
-#
-#     def check_port_in_use(self, port: int):
-#         import socket
-#         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#             return s.connect_ex(('localhost', port)) == 0
-#
-#     def choose_port(self, port: int):
-#         n_trials = 3
-#         for i in range(n_trials+1):
-#             chosen_port = port+i
-#             if self.check_port_in_use(chosen_port):
-#                 logging.info(f"[+] Port {chosen_port} is in use. Trying next port.")
-#                 continue
-#             else:
-#                 logging.info(f"[+] Port {chosen_port} is set successfully.")
-#                 return chosen_port
-#
-#         raise ValueError(f'[+] {n_trials} additional ports are in use. Please select another one.')
-#
-#     @property
-#     def to_dict(self):
-#         tmp_dict = self._to_dict
-#         tmp_dict.pop('self', None)
-#         tmp_dict.pop('__class__', None)
-#         tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
-#         return tmp_dict
+
 
 
 class Workflow(object):
@@ -382,7 +357,7 @@ class Workflow(object):
         if self._checker and isinstance(self._checker, Checker):
             return self._checker
         else:
-            raise TypeError('The added tracker must be '
+            raise TypeError('The added checker must be '
                             'an instance of class Checker. '
                             'Found: ' + str(self._checker[0]))
     @property

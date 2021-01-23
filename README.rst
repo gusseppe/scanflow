@@ -2,8 +2,8 @@
 Scanflow [WORK IN PROGRESS]
 ==========
 
-
-.. image:: https://img.shields.io/pypi/v/scanflow.svg
+..
+    .. image:: https://img.shields.io/pypi/v/scanflow.svg
         :target: https://pypi.python.org/pypi/scanflow
 
 .. image:: https://readthedocs.org/projects/scanflow/badge/?version=latest
@@ -11,10 +11,20 @@ Scanflow [WORK IN PROGRESS]
         :alt: Documentation Status
 
 
-.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/scanflow.png
 
+Machine Learning (ML) is more than just training models, the whole
+workflow must be considered. Once deployed, a ML model needs to be watched
+and constantly supervised and debugged to guarantee its validity and robustness in
+unexpected situations. Debugging in ML aims to identify (and address) the model
+weaknesses in not trivial contexts such as bias in classification, model decay,
+adversarial attacks, etc., yet there is not a generic framework that allows them to
+work in a collaborative, modular, portable, iterative way and, more importantly,
+flexible enough to allow both human and machine tasks to work in a multi-agent
+environment.
 
-Scalable library for end-to-end Machine Learning workflow management.
+Scanflow allows defining and deploying ML workflows in
+containers, tracking their metadata, checking their behavior in production, and
+improving the models by using both learned and human-provided knowledge.
 
 Scanflow is a high-level library that is built on top of MLflow and Docker to
 manage and supervise workflows efficiently. Its main goals are
@@ -23,6 +33,13 @@ usability, integration for deployment and real-time checking.
 * Free software: MIT license
 * Documentation: https://scanflow.readthedocs.io.
 
+Offline Debugging
+-----------------
+.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/offline_debugging.png
+
+Online Debugging
+-----------------
+.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/offline_debugging.png
 
 Features
 --------
@@ -42,44 +59,26 @@ Define your working folder and workflows.
 
 .. code-block:: python
 
-    from scanflow.setup import setup
-    from scanflow.run import run
+    import scanflow
+
+    from scanflow.setup import Setup, Executor, Workflow
+    from scanflow.special import Tracker, Checker, Improver, Planner
+    from scanflow.deploy import Deploy
 
     # App folder
-    app_dir = '/home/guess/Desktop/scanflow/examples/demo2/data-science/'
+    base_path = os.path.dirname(os.getcwd())
+    app_dir = os.path.join(base_path, "examples/demo2/data-science/")
 
-    # Workflows
+    gathering = Executor(name='gathering',
+                           file='gathering.py',
+                           dockerfile='Dockerfile_gathering')
 
-    # This workflow1 will gather and preprocess the raw data set. Order matters.
-    workflow1 = [
-        {'name': 'gathering',
-         'file': 'gathering.py',
-         'parameters': {'raw_data_path': 'leaf.csv',
-                        'percentage': 1.0},
-         'dockerfile': 'Dockerfile_gathering'}, # Provides a dockerfile
+    preprocessing = Executor(name='preprocessing',
+                           file='preprocessing.py',
+                           requirements='req_preprocessing.txt')
 
-        {'name': 'preprocessing',
-         'file': 'preprocessing.py',
-         'requirements': 'req_preprocessing.txt'}, # Convert requirements.txt to dockerfile
 
-    ]
-
-    # This workflow2 will model preprocess data set.
-    workflow2 = [
-        {'name': 'modeling',
-         'file': 'modeling.py',
-         'parameters': {'preprocessed_data': 'preprocessed_data.csv',
-                        'model_path': 'models',
-                        'n_estimators': 10},
-         'requirements': 'req_modeling.txt'}, # Convert requirements.txt to dockerfile
-        {'name': 'modeling2',
-         'file': 'modeling.py',
-         'parameters': {'preprocessed_data': 'preprocessed_data.csv',
-                        'model_path': 'models2',
-                        'n_estimators': 20},
-         'requirements': 'req_modeling.txt'},
-
-    ]
+    executors = [gathering, preprocessing]
 
 Append your workflows and set a tracker. Besides, you can set
 how to run your workflows (sequentially or in parallel).
@@ -87,13 +86,9 @@ how to run your workflows (sequentially or in parallel).
 .. code-block:: python
 
     # Workflows
-    workflows = [
-        {'name': 'workflow1', 'workflow': workflow1,
-         'tracker': {'port': 8001}},
-        {'name': 'workflow2', 'workflow': workflow2,
-         'tracker': {'port': 8002}, 'parallel': True}
-
-    ]
+    workflow1 = Workflow(name='workflow1',
+                     executors=executors,
+                     tracker=Tracker(port=8001))
 
 
 Setup your configuration: build and start the containers. Then,
@@ -101,23 +96,51 @@ run each workflow.
 
 .. code-block:: python
 
-    workflow_datascience = setup.Setup(app_dir, workflows, verbose=False)
+    workflows = Setup(app_dir, workflows=[workflow1],
+                             verbose=False)
 
-    # This will build and start the environments
-    workflow_datascience.run_pipeline()
+    # Define a deployer to build, start and run the workflows
+    deployer = Deploy(app_dir, setup, verbose=False)
 
-    # Read the platform and workflows
-    runner = run.Run(workflow_datascience, verbose=True)
+    # Build the docker images
+    deployer.build_workflows()
 
-    # Run the workflow
-    runner.run_workflows()
+    # Start the containers
+    deployer.start_workflows()
 
+    # Run the user's code on the containers
+    deployer.run_workflows()
+
+
+
+Once the workflows are executed, you can gather the
+tracked values using a Tracker special node.
+
+.. code-block:: python
+
+    from scanflow.track import Tracker
+
+    tracker = Tracker(app_dir)
+    df = tracker.get_tracked_values(workflow_name='workflow1')
 
 Installation
 ------------
 
 - Install docker.
 
+**Using conda**
+
 .. code-block:: bash
 
-    pip install scanflow (not yet)
+    conda create -n scanflow python=3.6
+    source activate scanflow
+    git clone https://github.com/gusseppe/scanflow
+    cd scanflow
+    pip install -r requirements.txt
+
+
+**Using pip (not yet available)**
+
+.. code-block:: bash
+
+    pip install scanflow
