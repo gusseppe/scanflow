@@ -24,7 +24,7 @@ client = docker.from_env()
 
 class Deploy:
     def __init__(self,
-                 app_dir=None,
+                 # app_dir=None,
                  workflower=None,
                  verbose=True):
         """
@@ -42,11 +42,11 @@ class Deploy:
         #     self.workflow = environment.workflow
         #     self.single_app_dir = environment.single_app_dir
 
-        self.app_dir = app_dir
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
         self.verbose = verbose
         if workflower is not None:
             self.workflows_user = workflower.workflows_user
+            self.app_dir = workflower.app_dir
+            self.ad_paths = tools.get_scanflow_paths(workflower.app_dir)
         else:
             self.workflows_user = None
         tools.check_verbosity(verbose)
@@ -223,7 +223,7 @@ class Deploy:
         if self.workflows_user is not None:
             for wflow_user in tqdm(self.workflows_user):
                 logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
-                containers, tracker_ctn = self.start_workflow(wflow_user, **kwargs)
+                containers, tracker_ctn = self.__start_workflow(wflow_user, **kwargs)
                 logging.info(f"[+] Workflow: [{wflow_user['name']}] was started successfully.")
                 # for w in self.workflows:
                 #     if w['name'] == wflow_user['name']:
@@ -233,7 +233,7 @@ class Deploy:
         else:
             raise ValueError('You must provide a workflow.')
 
-    def start_workflow(self, workflow, **kwargs):
+    def __start_workflow(self, workflow, **kwargs):
         """
         Run an the environment (Docker image)
 
@@ -368,9 +368,9 @@ class Deploy:
 
         """
         for wflow in self.workflows_user:
-            self.stop_workflow(wflow, tracker, network)
+            self.__stop_workflow(wflow, tracker, network)
 
-    def stop_workflow(self, workflow, tracker, network):
+    def __stop_workflow(self, workflow, tracker, network):
 
         for wflow in workflow['executors']:
             try:
@@ -429,9 +429,9 @@ class Deploy:
         for wf_user in tqdm(self.workflows_user):
             logging.info(f"[++] Running workflow: [{wf_user['name']}].")
             if 'parallel' in wf_user.keys():
-                environments = self.run_workflow(wf_user, wf_user['parallel'])
+                environments = self.__run_workflow(wf_user, wf_user['parallel'])
             else:
-                environments = self.run_workflow(wf_user)
+                environments = self.__run_workflow(wf_user)
 
             logging.info(f"[+] Workflow: [{wf_user['name']}] was run successfully.")
             workflow = {'name': wf_user['name'], 'envs': environments}
@@ -440,7 +440,7 @@ class Deploy:
         end = time.time()
         print(f"Elapsed time: {end-start}")
 
-    def run_workflow(self, workflow, parallel=False):
+    def __run_workflow(self, workflow, parallel=False):
         """
         Run a workflow that consists of several python files.
 

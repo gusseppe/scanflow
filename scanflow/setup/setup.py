@@ -51,151 +51,15 @@ class Setup:
         self.workflows_user = [w.to_dict for w in workflows]
         self.verbose = verbose
         tools.check_verbosity(verbose)
-        self.workflows = list()  # Contains name, images, containers.
+        # self.workflows = list()  # Contains name, images, containers.
+        self.workflows = workflows
         self.registry = None
+        self.graph = None
 
     # def run_pipeline(self):
     #     self.build_workflows()
     #
     #     return self
-
-    def build_workflows(self):
-        """
-        Build a environment with Docker images.
-
-        Parameters:
-            mlproject_name (str): Prefix of a Docker image.
-        Returns:
-            image (object): Docker image.
-        """
-
-        # Create scanflow directories for stuff
-
-        os.makedirs(self.ad_paths['ad_meta_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_tracker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_pred_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_model_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_scaler_dir'], exist_ok=True)
-
-        compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
-        for c_type in compose_types:
-            compose_path = tools.generate_compose(self.ad_paths,
-                                                  self.workflows_user,
-                                                  compose_type=c_type)
-
-        for wf_user in self.workflows_user:
-            logging.info(f"[++] Building workflow: [{wf_user['name']}].")
-            environments = self.__build_workflow(wf_user)
-            # environments, tracker = self.build_workflow(wf_user)
-            logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
-            workflow = {'name': wf_user['name'],
-                        'nodes': environments}
-            # 'type': 'execution node',
-            # 'tracker': tracker}
-
-            self.workflows.append(workflow)
-
-        tools.save_workflows(self.ad_paths, self.workflows)
-
-    def __build_workflow(self, workflow: dict):
-        """
-        Build a environment with Docker images.
-
-        Parameters:
-            workflow (dict): Prefix of a Docker image.
-        Returns:
-            image (object): Docker image.
-        """
-
-        environments = []
-        for wflow in workflow['executors']:
-            # mlproject_path = tools.generate_mlproject(self.app_dir,
-            #                                           environment=wflow,
-            #                                           wflow_name=workflow['name'])
-
-            # compose_path = tools.generate_compose(self.app_dir,
-            #                                       environment=wflow,
-            #                                       wflow=workflow)
-
-            logging.info(f"[+] Building env: [{workflow['name']}:{wflow['name']}].")
-            # if self.app_type == 'single':
-
-            env_image_name = f"{wflow['name']}"
-
-            # Save each python file to compose-verbose folder
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-            source = os.path.join(self.app_dir, 'workflow', wflow['file'])
-            copy2(source, meta_compose_dir)
-
-            # Create Dockerfile if needed
-            if 'requirements' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-                # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
-                # os.makedirs(meta_compose_dir, exist_ok=True)
-
-                # dockerfile_path = tools.generate_dockerfile(meta_compose_dir, environment=wflow)
-                dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
-                                                            executor=wflow,
-                                                            dock_type='executor',
-                                                            port=None)
-                source = os.path.join(self.app_dir, 'workflow', wflow['requirements'])
-                copy2(source, meta_compose_dir)
-                # metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
-                metadata = tools.build_image(env_image_name, meta_compose_dir, dockerfile_path)
-                environments.append(metadata)
-
-            elif 'dockerfile' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-                # os.makedirs(meta_compose_dir, exist_ok=True)
-
-                dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
-                dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
-                copy2(dockerfile_path, meta_compose_dir)
-                metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
-                environments.append(metadata)
-
-            elif 'env' in wflow.keys():  # the provided image name exists in repository
-                try:
-                    env_name_from_repo = wflow['env']
-                    # env_tag = wflow['name']
-
-                    image_from_repo = client.images.get(env_name_from_repo)
-                    # environments.append({'name': env_image_name,
-                    #                      'image': image_from_repo,
-                    #                      'type': 'executor',
-                    #                      'port': None})
-                    environments.append({'name': env_image_name,
-                                         'image': image_from_repo.tags,
-                                         'type': 'executor'})
-
-                except docker.api.client.DockerException as e:
-                    # logging.error(f"{e}")
-                    logging.info(f"[-] Image not found in repository. Please change image name.")
-
-        if 'tracker' in workflow.keys():
-            port = workflow['tracker']['port']
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-            # os.makedirs(meta_compose_dir, exist_ok=True)
-            # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
-            dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
-                                                        executor=workflow,
-                                                        dock_type='tracker',
-                                                        port=port)
-            # copy2(dockerfile_path, meta_compose_dir)
-
-            tracker_image_name = f"tracker-{workflow['name']}"
-            tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
-            metadata = tools.build_image(tracker_image_name, meta_compose_dir,
-                                         dockerfile_path, 'tracker', port, tracker_dir)
-            # metadata = tools.build_image(tracker_image_name, self.app_dir,
-            #                              dockerfile_path, 'tracker', port)
-            environments.append(metadata)
-
-            # return environments, tracker_image
-            return environments
-
-        return environments
 
 
     def __repr__(self):
