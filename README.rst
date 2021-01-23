@@ -39,7 +39,7 @@ Offline Debugging
 
 Online Debugging
 -----------------
-.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/offline_debugging.png
+.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/online_debugging.png
 
 Features
 --------
