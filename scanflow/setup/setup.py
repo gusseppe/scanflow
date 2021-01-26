@@ -5,7 +5,10 @@
 import docker
 from typing import List, Dict
 import os
+import datetime
 import logging
+import networkx as nx
+import matplotlib.pyplot as plt
 
 from scanflow import tools
 
@@ -54,13 +57,75 @@ class Setup:
         # self.workflows = list()  # Contains name, images, containers.
         self.workflows = workflows
         self.registry = None
-        self.graph = None
+        self.graph = self.get_graph()
 
     # def run_pipeline(self):
     #     self.build_workflows()
     #
     #     return self
 
+    def get_graph(self):
+        G = nx.MultiDiGraph(name="Offline Debugging")
+
+        for i_workflow, workflow in enumerate(self.workflows):
+            order_node = 0
+            for i_node, node in enumerate(workflow.executors):
+                if not workflow.parallel:
+                    order_node = i_node
+
+                G.add_node(node.name, init=node,
+                           workflow_name=workflow.name,
+                           level=i_workflow,
+                           order=order_node,
+                           status='defined',
+                           mode='offline',
+                           parallel=workflow.parallel,
+                           id=id(node),
+                           date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                           namespace=f"{workflow.name}.{node.name}")
+
+                if not workflow.parallel:
+                    if i_node < len(workflow.executors) - 1:
+                        G.add_edge(workflow.executors[i_node].name,
+                                   workflow.executors[i_node + 1].name)
+
+            if not workflow.parallel:
+                # Add an edge from the last node in wf_i to the nodes in wf_i+1
+                if i_workflow < len(self.workflows) - 1:
+                    for i_1_node, node1 in enumerate(self.workflows[i_workflow + 1].executors):
+                        G.add_edge(self.workflows[i_workflow].executors[i_node].name,
+                                   self.workflows[i_workflow + 1].executors[i_1_node].name)
+            else:
+                if i_workflow < len(self.workflows) - 1:
+                    for i_node, node in enumerate(self.workflows[i_workflow].executors):
+                        G.add_edge(self.workflows[i_workflow].executors[i_node].name,
+                                   self.workflows[i_workflow + 1].executors[0].name)
+
+            if workflow._tracker:
+                tracker_name = f"Tracker{i_workflow + 1}"
+                G.add_node(tracker_name, init=workflow._tracker,
+                           type='tracker',
+                           workflow_name=workflow.name,
+                           level=i_workflow,
+                           status='defined',
+                           mode='offline',
+                           id=id(workflow._tracker),
+                           date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                           namespace=f"{workflow.name}.{tracker_name}")
+
+        return G
+
+    def draw_graph(self):
+        nodes = self.graph.nodes()
+        nodes_color = [nodes[node]['level'] for node in nodes]
+
+        plt.figure(figsize=(10, 7))
+        pos = nx.circular_layout(self.graph)
+        nx.draw_networkx(self.graph, pos, edge_cmap=plt.cm.Blues, width=3,
+                         arrowsize=20, with_label=True, node_color=nodes_color,
+                         cmap=plt.cm.Pastel2, node_size=1000, font_size=15)
+        plt.title(self.graph.name)
+        plt.show()
 
     def __repr__(self):
         workflows_names = [d['name'] for d in self.workflows_user]
@@ -160,15 +225,15 @@ class Executor(Node):
         tmp_dict = {k: v for k, v in tmp_dict.items() if v is not None}
         return tmp_dict
 
-    def __repr__(self):
-        # workflows_names = [d['name'] for d in self.workflows_user]
-        _repr = self.name
-        # _repr = dedent(f"""
-        # Executor = (
-        #     Name: {self.name}
-        # )
-        # """)
-        return _repr
+    # def __repr__(self):
+    #     # workflows_names = [d['name'] for d in self.workflows_user]
+    #     _repr = self.name
+    #     # _repr = dedent(f"""
+    #     # Executor = (
+    #     #     Name: {self.name}
+    #     # )
+    #     # """)
+    #     return _repr
 
 
 
