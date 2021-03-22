@@ -2,7 +2,7 @@ artifact_uri: /mlflow/mlruns/0/f03401ce9e984126aa59715e1083e292/artifacts
 end_time: 1599203397720
 entry_point_name: ''
 experiment_id: '0'
-lifecycle_stage: active
+lifecycle_stage: deleted
 name: ''
 run_id: f03401ce9e984126aa59715e1083e292
 run_uuid: f03401ce9e984126aa59715e1083e292

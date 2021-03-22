@@ -230,6 +230,21 @@ def generate_dockerfile(folder, dock_type='executor', executor=None, port=None):
     elif dock_type == 'tracker':
         dockerfile = dockerfile_template_tracker(port)
         filename = f"Dockerfile_tracker_{executor['name']}"
+    elif dock_type == 'tracker_agent':
+        dockerfile = dockerfile_template_tracker_agent(port)
+        filename = f"Dockerfile_tracker_agent_{executor['name']}"
+    elif dock_type == 'checker':
+        dockerfile = dockerfile_template_checker(port)
+        filename = f"Dockerfile_checker_{executor['name']}"
+    elif dock_type == 'checker_agent':
+        dockerfile = dockerfile_template_checker_agent(port)
+        filename = f"Dockerfile_checker_agent_{executor['name']}"
+    elif dock_type == 'improver_agent':
+        dockerfile = dockerfile_template_improver_agent(port)
+        filename = f"Dockerfile_improver_agent_{executor['name']}"
+    elif dock_type == 'planner_agent':
+        dockerfile = dockerfile_template_planner_agent(port)
+        filename = f"Dockerfile_planner_agent_{executor['name']}"
 
     dockerfile_path = os.path.join(folder, filename)
     with open(dockerfile_path, 'w') as f:
@@ -257,7 +272,7 @@ def dockerfile_template_executor(executor):
     return template
 
 
-def dockerfile_template_tracker(port=8001):
+def dockerfile_template_tracker(port=8002):
     # if app_type == 'single':
     template = dedent(f'''
                 FROM continuumio/miniconda3
@@ -266,10 +281,10 @@ def dockerfile_template_tracker(port=8001):
                 ENV MLFLOW_HOME  /mlflow
                 ENV MLFLOW_HOST  0.0.0.0
                 ENV MLFLOW_PORT  {port}
-                ENV MLFLOW_BACKEND  /mlflow/mlruns
+                ENV MLFLOW_BACKEND  sqlite:////mlflow/backend.sqlite
                 ENV MLFLOW_ARTIFACT  /mlflow/mlruns
 
-                RUN pip install mlflow
+                RUN pip install mlflow==1.14.1
                 RUN mkdir $MLFLOW_HOME
                 RUN mkdir -p $MLFLOW_BACKEND
                 RUN mkdir -p $MLFLOW_ARTIFACT
@@ -284,6 +299,154 @@ def dockerfile_template_tracker(port=8001):
     ''')
     return template
 
+# def dockerfile_template_tracker_agent(port=8003):
+#     # if app_type == 'single':
+#     template = dedent(f'''
+#                 FROM continuumio/miniconda3
+#                 LABEL maintainer='scanflow'
+#
+#                 ENV AGENT_HOME  /mlflow/agent
+#                 ENV AGENT_PORT  {port}
+#
+#                 ENV MLFLOW_HOME  /mlflow
+#                 ENV MLFLOW_DIR  /mlflow/mlruns
+#
+#                 RUN pip install mlflow==1.11.0
+#                 RUN pip install fastapi
+#                 RUN pip install uvicorn
+#                 RUN pip install aiohttp[speedups]
+#
+#                 RUN mkdir $MLFLOW_HOME
+#                 RUN mkdir -p $MLFLOW_DIR
+#                 RUN mkdir -p $AGENT_HOME
+#
+#                 WORKDIR $AGENT_HOME
+#
+#                 CMD python tracker_agent.py
+#
+#     ''')
+# Eliminate the AGENT_PORT because it is fed in runtime (starting)
+def dockerfile_template_tracker_agent(port=8003):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='scanflow'
+
+                ENV AGENT_BASE_PATH  /tracker
+                ENV AGENT_HOME  /tracker/agent
+                ENV AGENT_PORT  {port}
+
+                RUN pip install mlflow==1.14.1
+                RUN pip install fastapi
+                RUN pip install uvicorn
+                RUN pip install aiohttp
+                RUN pip install aiodns
+
+                RUN mkdir $AGENT_BASE_PATH
+                RUN mkdir -p $AGENT_HOME
+
+                WORKDIR $AGENT_HOME
+
+                CMD uvicorn tracker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+
+    ''')
+    return template
+
+def dockerfile_template_checker(port=8004):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='scanflow'
+
+                ENV CHECKER_HOME  /checker
+
+                RUN pip install tensorflow==2.4.1
+                RUN pip install mlflow==1.14.1
+                RUN mkdir $CHECKER_HOME
+
+                WORKDIR $CHECKER_HOME
+
+
+    ''')
+    return template
+
+def dockerfile_template_checker_agent(port=8005):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='scanflow'
+
+                ENV AGENT_BASE_PATH  /checker
+                ENV AGENT_HOME  /checker/agent
+                ENV AGENT_PORT  {port}
+
+                RUN pip install mlflow==1.14.1
+                RUN pip install fastapi
+                RUN pip install uvicorn
+                RUN pip install aiohttp
+                RUN pip install aiodns
+
+                RUN mkdir $AGENT_BASE_PATH
+                RUN mkdir -p $AGENT_HOME
+
+                WORKDIR $AGENT_HOME
+
+                CMD uvicorn checker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+
+    ''')
+    return template
+
+def dockerfile_template_improver_agent(port=8005):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='scanflow'
+
+                ENV AGENT_BASE_PATH  /improver
+                ENV AGENT_HOME  /improver/agent
+                ENV AGENT_PORT  {port}
+
+                RUN pip install mlflow==1.14.1
+                RUN pip install fastapi
+                RUN pip install uvicorn
+                RUN pip install aiohttp
+                RUN pip install aiodns
+
+                RUN mkdir $AGENT_BASE_PATH
+                RUN mkdir -p $AGENT_HOME
+
+                WORKDIR $AGENT_HOME
+
+                CMD uvicorn improver_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+
+    ''')
+    return template
+
+def dockerfile_template_planner_agent(port=8005):
+    # if app_type == 'single':
+    template = dedent(f'''
+                FROM continuumio/miniconda3
+                LABEL maintainer='scanflow'
+
+                ENV AGENT_BASE_PATH  /planner
+                ENV AGENT_HOME  /planner/agent
+                ENV AGENT_PORT  {port}
+
+                RUN pip install mlflow==1.14.1
+                RUN pip install fastapi
+                RUN pip install uvicorn
+                RUN pip install aiohttp
+                RUN pip install aiodns
+
+                RUN mkdir $AGENT_BASE_PATH
+                RUN mkdir -p $AGENT_HOME
+
+                WORKDIR $AGENT_HOME
+
+                CMD uvicorn planner_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+
+    ''')
+    return template
 
 def generate_main_file(app_dir, id_date):
 
@@ -603,12 +766,18 @@ def get_scanflow_paths(app_dir):
     ad_checker_pred_dir = os.path.join(ad_checker_dir, 'predictions')
     ad_checker_model_dir = os.path.join(ad_checker_dir, 'model')
     ad_checker_scaler_dir = os.path.join(ad_checker_dir, 'scaler')
+
+    improver_dir = os.path.join(ad_stuff_dir, 'improver')
+    planner_dir = os.path.join(ad_stuff_dir, 'planner')
+
     ad_paths = {'app_dir': app_dir,
                 'app_workflow_dir': app_workflow_dir,
                 'ad_stuff_dir': ad_stuff_dir,
                 'ad_meta_dir': ad_meta_dir,
                 'ad_tracker_dir': ad_tracker_dir,
                 'ad_checker_dir': ad_checker_dir,
+                'improver_dir': improver_dir,
+                'planner_dir': planner_dir,
                 'ad_checker_pred_dir': ad_checker_pred_dir,
                 'ad_checker_model_dir': ad_checker_model_dir,
                 'ad_checker_scaler_dir': ad_checker_scaler_dir}

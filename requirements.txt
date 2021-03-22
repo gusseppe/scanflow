@@ -1,5 +1,5 @@
 click==7.0
-mlflow==1.13.1
+mlflow==1.14.1
 keras==2.3.1
 tensorflow==2.1.0
 docker==4.1.0

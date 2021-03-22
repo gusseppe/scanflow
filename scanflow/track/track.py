@@ -3,23 +3,15 @@
 # Author: Gusseppe Bravo <gbravor@uni.pe>
 # License: BSD 3 clause
 
-import json
-import time
 import os
 
 import docker
 import logging
 import mlflow
-import requests
-import seaborn as sns
-import pandas as pd
-import tempfile
-import numpy as np
-import matplotlib.pyplot as plt
 
+from pathlib import Path
 from textwrap import dedent
 from scanflow.track.tools import get_input_predictions, search_by_key
-from scanflow.check.statistical import kolmogorov
 from scanflow import tools
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
@@ -73,6 +65,7 @@ class Tracker:
         tracker_dirs = [next(search_by_key('tracker_dir', e)) for e in self.workflows]
         tracker_wflow_dir = [tdir for tdir in tracker_dirs if workflow_name in tdir]
 
+
         if len(tracker_wflow_dir) == 0:
             return None
         else:
@@ -105,10 +98,60 @@ class Tracker:
         else:
             return None
 
-    def list_artifacts(self, workflow_name, run_id):
-        tracker = self.get_tracker(workflow_name)
+    # def get_artifacts(self, workflow_name, experiment_name='Default', artifact_name='input.npy'):
+    #     tracker_port = '8002'
+    #     tracker_uri = f"http://localhost:{tracker_port}"
+    #
+    #     tracker = mlflow.tracking.MlflowClient(tracking_uri=tracker_uri)
+    #
+    #     experiment = tracker.get_experiment_by_name(experiment_name)
+    #     experiment_id = experiment.experiment_id
+    #
+    #     runs_info = tracker.list_run_infos(experiment_id,
+    #                                       order_by=["attribute.start_time DESC"])
+    #     if runs_info:
+    #         last_run_id = runs_info[0]
+    #         tracker_dir = self.get_tracker_dir(workflow_name)
+    #         artifact_path = os.path.join(tracker_dir, last_run_id.artifact_uri[1:], artifact_name)
+    #
+    #         return artifact_path
+    #     else:
+    #         return None
+    #
+    #
+    #     return artifacts
+
+    def list_artifacts(self, workflow_name, run_id=None, experiment_name='Default'):
+        tracker_port = '8002'
+        tracker_uri = f"http://localhost:{tracker_port}"
+
+        tracker = mlflow.tracking.MlflowClient(tracking_uri=tracker_uri)
         tracker_dir = self.get_tracker_dir(workflow_name)
+
+
+        if run_id is None: # Return the last experiment run
+            # exp_dir = os.path.join(tracker_dir, f"mlruns/{experiment_id}")
+            # paths = sorted(Path(exp_dir).iterdir(), key=os.path.getmtime, reverse=True)
+            # run_id = os.path.basename(str(paths[0]))
+
+            logging.info(f"[Tracker]  'run_id' is not provided. Loading the latest experiment.")
+            experiment = tracker.get_experiment_by_name(experiment_name)
+            if experiment:
+                experiment_id = experiment.experiment_id
+                if experiment_name == 'Default':
+                    logging.info(f"[Tracker]  'experiment_name' is not provided. Loading the 'Default' experiment.")
+            else:
+                logging.info(f"[Tracker]  Please provide a valid experiment name.")
+
+                return None
+
+            runs_info = tracker.list_run_infos(experiment_id,
+                                              order_by=["attribute.start_time DESC"])
+            run_id = runs_info[0].run_id
+
+
         run = tracker.get_run(run_id)
+
         artifact_dir = run.info.artifact_uri.replace('/mlflow', tracker_dir)
 
         artifacts = {artifact : os.path.join(artifact_dir, artifact)

@@ -113,6 +113,40 @@ class Setup:
                            date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
                            namespace=f"{workflow.name}.{tracker_name}")
 
+            if workflow._checker:
+                checker_name = f"Checker{i_workflow + 1}"
+                G.add_node(checker_name, init=workflow._checker,
+                           type='checker',
+                           workflow_name=workflow.name,
+                           level=i_workflow,
+                           status='defined',
+                           mode='offline',
+                           id=id(workflow._checker),
+                           date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                           namespace=f"{workflow.name}.{checker_name}")
+            if workflow._improver:
+                improver_name = f"Improver{i_workflow + 1}"
+                G.add_node(improver_name, init=workflow._improver,
+                           type='improver',
+                           workflow_name=workflow.name,
+                           level=i_workflow,
+                           status='defined',
+                           mode='offline',
+                           id=id(workflow._improver),
+                           date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                           namespace=f"{workflow.name}.{improver_name}")
+            if workflow._planner:
+                planner_name = f"Planner{i_workflow + 1}"
+                G.add_node(planner_name, init=workflow._planner,
+                           type='planner',
+                           workflow_name=workflow.name,
+                           level=i_workflow,
+                           status='defined',
+                           mode='offline',
+                           id=id(workflow._planner),
+                           date=datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S'),
+                           namespace=f"{workflow.name}.{planner_name}")
+
         return G
 
     def draw_graph(self):
@@ -242,6 +276,7 @@ class Workflow(object):
     def __init__(self,
                  name: str = None,
                  executors: List[Executor] = None,
+                 # mode: str = "offline",
                  tracker: Tracker = None,
                  checker: Checker = None,
                  improver: Improver = None,
@@ -290,6 +325,23 @@ class Workflow(object):
                             'an instance of class Checker. '
                             'Found: ' + str(self._checker[0]))
     @property
+    def improver(self):
+        if self._improver and isinstance(self._improver, Improver):
+            return self._improver
+        else:
+            raise TypeError('The added improver must be '
+                            'an instance of class Improver. '
+                            'Found: ' + str(self._improver[0]))
+
+    @property
+    def planner(self):
+        if self._planner and isinstance(self._planner, Planner):
+            return self._planner
+        else:
+            raise TypeError('The added planner must be '
+                            'an instance of class Planner. '
+                            'Found: ' + str(self._planner[0]))
+    @property
     def to_dict(self):
         tmp_dict = self._to_dict
         tmp_dict.pop('self', None)
@@ -302,6 +354,10 @@ class Workflow(object):
             if k == 'tracker':
                 tmp_dict[k] = v.to_dict
             if k == 'checker':
+                tmp_dict[k] = v.to_dict
+            if k == 'improver':
+                tmp_dict[k] = v.to_dict
+            if k == 'planner':
                 tmp_dict[k] = v.to_dict
 
         tmp_dict['executors'] = executors_list

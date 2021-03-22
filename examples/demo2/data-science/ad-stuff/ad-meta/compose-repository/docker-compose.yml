@@ -1,21 +1,8 @@
 version: '3'
 services:
-  gathering:
-    image: gathering
-    container_name: gathering-20201201154133
-    networks:
-    - network-workflow1
-    depends_on:
-    - tracker-workflow1
-    environment:
-      MLFLOW_TRACKING_URI: http://tracker-workflow1:8001
-    volumes:
-    - /home/guess/Desktop/scanflow/examples/demo2/data-science/:/app
-    - /home/guess/Desktop/scanflow/examples/demo2/data-science/ad-stuff/ad-tracker/tracker-workflow1:/mlflow
-    tty: 'true'
-  preprocessing:
-    image: preprocessing
-    container_name: preprocessing-20201201154133
+  requester:
+    image: requester
+    container_name: requester-20210223161828
     networks:
     - network-workflow1
     depends_on:
@@ -28,7 +15,7 @@ services:
     tty: 'true'
   tracker-workflow1:
     image: tracker-workflow1
-    container_name: tracker-workflow1-20201201154133
+    container_name: tracker-workflow1-20210223161828
     networks:
     - network-workflow1
     volumes:

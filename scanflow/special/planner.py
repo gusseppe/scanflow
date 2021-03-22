@@ -12,9 +12,11 @@ class Planner(Node):
 
     def __init__(self,
                  name:str = None,
-                 port:int = 8004):
+                 mode='online',
+                 port:int = 8007):
 
         super(Planner, self).__init__(name=name)
+        self.mode = mode
         self.port = self.choose_port(port)
         self._to_dict = locals()
 
@@ -24,17 +26,13 @@ class Planner(Node):
             return s.connect_ex(('localhost', port)) == 0
 
     def choose_port(self, port: int):
-        n_trials = 3
-        for i in range(n_trials+1):
-            chosen_port = port+i
-            if self.check_port_in_use(chosen_port):
-                logging.info(f"[Planner] Port {chosen_port} is in use. Trying next port.")
-                continue
-            else:
-                logging.info(f"[Planner] Port {chosen_port} is set successfully.")
-                return chosen_port
+        chosen_port = port
+        if self.check_port_in_use(chosen_port):
+            logging.info(f"[Planner] Port {chosen_port} is in use by Planner.")
+        else:
+            logging.info(f"[Planner] Port {chosen_port} is set successfully.")
 
-        raise ValueError(f'[Planner] {n_trials} additional ports are in use. Please select another one.')
+        return chosen_port
 
     @property
     def to_dict(self):

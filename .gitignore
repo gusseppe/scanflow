@@ -3,28 +3,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# C extensions
-*.so
-
-# Distribution / packaging
-.Python
-env/
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
@@ -36,16 +14,6 @@ pip-log.txt
 pip-delete-this-directory.txt
 
 # Unit test / coverage reports
-htmlcov/
-.tox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-.hypothesis/
-.pytest_cache/
 
 
 # Sphinx documentation
@@ -61,10 +29,7 @@ target/
 .env
 
 # virtualenv
-.venv
 venv/
-venv2/
-ENV/
 
 # Pycharm project
 .idea/
@@ -80,3 +45,8 @@ stuff/
 
 # mypy
 .mypy_cache/
+
+# dataset
+examples/demo_mnist/data-science/workflow/mnist_c
+examples/demo_mnist/data-science/workflow/mnist
+examples/demo_mnist/data-science/ad-stuff/ad-tracker/tracker-mnist/mlruns
