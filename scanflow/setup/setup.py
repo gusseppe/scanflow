@@ -190,6 +190,7 @@ class Setup:
             containers (object): Docker container.
         """
         for wflow in self.workflows:
+            print(wflow)
             for container in wflow['ctns']:
                 if 'tracker' not in container['name']:
                     self.save_env(container, registry_name)

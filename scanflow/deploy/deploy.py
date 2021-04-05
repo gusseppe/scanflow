@@ -32,7 +32,8 @@ class Deploy:
             deployer = Deploy(platform)
 
         Parameters:
-            app_dir (str): The platform that comes from setup class.
+            workflower (str): The platform that comes from setup class.
+            verbose (bool): Activate logging or not.
 
         """
         # if environment is not None:
@@ -352,7 +353,7 @@ class Deploy:
 
             if 'tracker' in workflow.keys():
                 host_path = self.app_dir
-                container_path = '/app'
+                container_path = '/executor'
 
                 workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
 
@@ -386,7 +387,7 @@ class Deploy:
 
             else:
                 host_path = self.app_dir
-                container_path = '/app'
+                container_path = '/executor'
 
                 if 'volumes' not in kwargs:
                     volumes = {host_path: {'bind': container_path, 'mode': 'rw'}}
@@ -419,7 +420,8 @@ class Deploy:
             # logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
             # try:
             port = workflow['tracker']['port']
-            ports = {f"{port}/tcp": port, f"22/tcp": 51022}
+            ports = {f"{port}/tcp": port}
+            # ports = {f"{port}/tcp": port, f"22/tcp": 51022}
 
             if 'volumes' in kwargs:
                 kwargs['volumes'].update(volumes)
@@ -450,7 +452,8 @@ class Deploy:
                 tracker_image_agent_name = f"tracker-agent-{workflow['name']}"
                 tracker_tag_agent_name = f"tracker-agent-{workflow['name']}"
                 port_agent = port + 1
-                ports_agent = {f"{port_agent}/tcp": port_agent, f"22/tcp": 52022}
+                ports_agent = {f"{port_agent}/tcp": port_agent}
+                # ports_agent = {f"{port_agent}/tcp": port_agent, f"22/tcp": 52022}
                 kwargs['ports'] = ports_agent
                 kwargs['environment'].update({'AGENT_PORT': port_agent})
                 tracker_agent_container = tools.start_image(image=tracker_image_agent_name,
@@ -881,13 +884,13 @@ class Deploy:
             # image = image_name
         logging.info(f"[++] Running predictor [{name}].")
 
-        port_predictor_ctn = 8080
+        port_predictor_ctn = 8000
         ports = {f'{port_predictor_ctn}/tcp': port}
 
         env_container = tools.start_image(image=image,
                                           name=name,
                                           ports=ports)
-        self.predictor_repr.update({'ctn': env_container, 'port': port})
+        # self.predictor_repr.update({'ctn': env_container, 'port': port})
 
         logging.info(f"[+] Predictor API at [http://localhost:{port}]. ")
 
@@ -959,7 +962,29 @@ class Deploy:
 
         return _repr
 
-    def save_env(self, registry_name):
+    # def save_env(self, registry_name):
+    #     """
+    #     Run an image that yields a environment.
+    #
+    #     Parameters:
+    #         registry_name (str): Name of registry to save.
+    #
+    #     Returns:
+    #         containers (object): Docker container.
+    #     """
+    #     if self.app_type == 'single':
+    #         try:
+    #             # for name_ctn, ctn in self.env_container.items():
+    #             self.api_container_object['ctn'].commit(repository=registry_name,
+    #                                              tag=self.api_container_object['image'],
+    #                                              message='First commit')
+    #             logging.info(f"[+] Environment [{self.api_container_object['image']}] was saved to registry [{registry_name}].")
+    #
+    #         except docker.api.client.DockerException as e:
+    #             logging.error(f"{e}")
+    #             logging.error(f"Container creation failed.")
+
+    def save_envs(self, registry_name: str):
         """
         Run an image that yields a environment.
 
@@ -969,17 +994,38 @@ class Deploy:
         Returns:
             containers (object): Docker container.
         """
-        if self.app_type == 'single':
-            try:
-                # for name_ctn, ctn in self.env_container.items():
-                self.api_container_object['ctn'].commit(repository=registry_name,
-                                                 tag=self.api_container_object['image'],
-                                                 message='First commit')
-                logging.info(f"[+] Environment [{self.api_container_object['image']}] was saved to registry [{registry_name}].")
+        for wflow in self.workflows:
+            print(wflow)
+            for container in wflow['ctns']:
+                if 'tracker' not in container['name']:
+                    self.save_env(container, registry_name)
 
-            except docker.api.client.DockerException as e:
-                logging.error(f"{e}")
-                logging.error(f"Container creation failed.")
+
+    def save_env(self, container, registry_name):
+        """
+        Run an image that yields a environment.
+
+        Parameters:
+            registry_name (str): Name of registry to save.
+
+        Returns:
+            containers (object): Docker container.
+
+        TODO:
+            Handle when an env already exists in repo
+        """
+        try:
+            # for name_ctn, ctn in self.env_container.items():
+            container['ctn'].commit(repository=registry_name,
+                                    tag=container['name'],
+                                    message='First commit')
+
+            logging.info(f"[+] Environment [{container['name']}] was saved to registry [{registry_name}].")
+
+        except docker.api.client.DockerException as e:
+            logging.error(f"{e}")
+            logging.error(f"[-] Saving [{container['name']}] failed.", exc_info=True)
+
 
     def predict(self, input_name, port=5001):
         """

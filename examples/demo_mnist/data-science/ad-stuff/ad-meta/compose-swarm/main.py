@@ -13,15 +13,15 @@ app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/data-science/'
 
 # Workflows
 workflow1 = [
-    {'name': 'gathering-20210322133206', 'file': 'gathering.py',
+    {'name': 'gathering-20210405164111', 'file': 'gathering.py',
             'env': 'gathering'},
 
-    {'name': 'preprocessing-20210322133206', 'file': 'preprocessing.py',
+    {'name': 'preprocessing-20210405164111', 'file': 'preprocessing.py',
             'env': 'preprocessing'},
 
 ]
 workflow2 = [
-    {'name': 'modeling-20210322133206', 'file': 'modeling.py',
+    {'name': 'modeling-20210405164111', 'file': 'modeling.py',
             'env': 'modeling'},
 
 

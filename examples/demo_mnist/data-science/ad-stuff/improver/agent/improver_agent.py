@@ -117,6 +117,7 @@ async def execute_improver(feedback: dict):
                 return model_input.apply(lambda column: column + self.n)
             
         new_model = AddN(n=5)
+        
         with mlflow.start_run(experiment_id=experiment_id,
                               run_name=agent_name) as mlrun:    
             mlflow.pyfunc.log_model(
@@ -138,7 +139,6 @@ async def execute_improver(feedback: dict):
         async with app.aiohttp_session.post(message.receiver, json=content) as response:
             result_planner = await response.json(content_type=None)
 
-#         print(f"from planner xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx{result_planner}")
         
         response = {'conclusions': {
                         "action": f'Retraining the model using the new data: {input_local_path}',

@@ -1,8 +1,12 @@
 
 FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
 
-RUN mkdir /app
-ADD req_predictor.txt /app
-WORKDIR /app
+COPY req_predictor.txt req_predictor.txt
 RUN pip install -r req_predictor.txt
+
+RUN useradd -m -d /executor executor
+RUN chown -R executor /executor
+USER executor
+WORKDIR /executor
 

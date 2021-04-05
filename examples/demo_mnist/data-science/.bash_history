@@ -1,0 +1,19 @@
+ls
+pwd
+exit
+ls
+python
+exit
+pwd
+python
+exit
+import python
+python
+ls
+exit
+ls
+pwd
+whoami
+python
+exit()
+exit

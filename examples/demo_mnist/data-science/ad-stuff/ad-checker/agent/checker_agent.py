@@ -78,7 +78,14 @@ class Message(BaseModel):
 #             return b
 
 def calculate_anomalies(input_data):
-    anomalies = np.random.choice([0, 1], size=(len(input_data),), p=[0.9, 0.1])
+    if len(input_data) < 1000: #Simulate corrupted data
+        anomalies = np.random.choice([0, 1], 
+                                     size=(len(input_data),),
+                                     p=[0.8, 0.2])
+    else:
+        anomalies = np.random.choice([0, 1], 
+                                     size=(len(input_data),),
+                                     p=[0.98, 0.02])  
 
     return anomalies
 

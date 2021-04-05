@@ -50,6 +50,16 @@ class Tracker:
 
         return self
 
+    def delete_tracked_data(self):
+        confirmation: str = input("Are you sure you want to delete all the tracked data?. (yes/no)" )
+
+        if confirmation.lower() == 'yes':
+            print(self.ad_paths['ad_tracker_dir'])
+        elif confirmation.lower() == 'no':
+            print("No changes were performed.")
+        else:
+            print("Please enter yes or no.")
+
     def get_tracker(self, workflow_name='workflow1'):
 
         tracker_uri = self.get_tracker_uri(workflow_name)

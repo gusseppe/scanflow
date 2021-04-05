@@ -7,7 +7,7 @@ import torchvision.transforms as transforms
 import random
 import numpy as np
 import os
-from tqdm import tqdm
+
 
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import StepLR
@@ -161,7 +161,7 @@ def train_model(params, model, device, train_loader, optimizer, epoch):
     params = get_model_params()
     # torch.manual_seed(params['seed'])
     model.train()
-    for batch_idx, (data, target) in enumerate(tqdm(train_loader)):
+    for batch_idx, (data, target) in enumerate(train_loader):
         target = target.type(torch.LongTensor)
         data, target = data.to(device), target.to(device)
         optimizer.zero_grad()
@@ -182,7 +182,7 @@ def test_model(model, device, test_loader):
     test_loss = 0
     correct = 0
     with torch.no_grad():
-        for data, target in tqdm(test_loader):
+        for data, target in test_loader:
             target = target.type(torch.LongTensor)
             data, target = data.to(device), target.to(device)
             
@@ -248,3 +248,40 @@ def evaluate(model, x_test, y_test):
 
 
     return score
+
+def score_model(path, host, port):
+    """
+    Score images on the local path with MLflow model deployed at given uri and port.
+    :param path: Path to a single image file or a directory of images.
+    :param host: host the model is deployed at
+    :param port: Port the model is deployed at.
+    :return: Server response.
+    """
+    if os.path.isdir(path):
+        filenames = [
+            os.path.join(path, x) for x in os.listdir(path) if os.path.isfile(os.path.join(path, x))
+        ]
+    else:
+        filenames = [path]
+
+    def read_image(x):
+        with open(x, "rb") as f:
+            return f.read()
+
+    data = pd.DataFrame(
+        data=[base64.encodebytes(read_image(x)) for x in filenames], columns=["image"]
+    ).to_json(orient="split")
+
+    response = requests.post(
+        url="{host}:{port}/invocations".format(host=host, port=port),
+        data=data,
+        headers={"Content-Type": "application/json; format=pandas-split"},
+    )
+
+    if response.status_code != 200:
+        raise Exception(
+            "Status Code {status_code}. {text}".format(
+                status_code=response.status_code, text=response.text
+            )
+        )
+    return response

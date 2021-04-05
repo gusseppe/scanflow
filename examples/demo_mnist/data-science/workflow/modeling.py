@@ -7,9 +7,15 @@ import predictor_utils
 import numpy as np
 import torch
 import mlflow.pytorch
+import shutil
+import os
 
+
+from mlflow.tracking import MlflowClient
 from mlflow.models.signature import infer_signature
 from pathlib import Path
+
+client = MlflowClient()
 
 @click.command(help="Gather an input data set")
 @click.option("--x_train_path", default='./images', type=str)
@@ -35,8 +41,20 @@ def modeling(x_train_path, y_train_path, x_test_path, y_test_path):
         
         signature = infer_signature(x_test, predictions)
         mlflow.pytorch.log_model(model_mnist, artifact_path="mnist_cnn", 
-                                 signature=signature, registered_model_name="mnist_cnn")
-
+                                 signature=signature, 
+                                 registered_model_name="mnist_cnn",
+                                 input_example=x_test[:2])
+        client.transition_model_version_stage(
+            name="mnist_cnn",
+            version=1,
+            stage="Staging"
+        )  
+        model_path = './model'
+        if os.path.isdir(model_path):
+            shutil.rmtree(model_path, ignore_errors=True)
+        else:
+            mlflow.pytorch.save_model(model_mnist, model_path)
+            
         mlflow.log_param(key='score', value=round(mnist_score, 2))
 
         mlflow.log_artifact(x_train_path, 'dataset')

@@ -94,12 +94,12 @@ async def execute_planner(conclusions: dict):
     client.transition_model_version_stage(
         name=conclusions['current_model_name'],
         version=conclusions['current_model_version'],
-        stage="Staging"
+        stage="Archived"
     )
     client.transition_model_version_stage(
         name=new_model_name,
         version=1,
-        stage="Production"
+        stage="Staging"
     )  
 
     response = {'Plan': {

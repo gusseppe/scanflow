@@ -1,8 +1,12 @@
 
 FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
 
-RUN mkdir /app
-ADD req_modeling.txt /app
-WORKDIR /app
+COPY req_modeling.txt req_modeling.txt
 RUN pip install -r req_modeling.txt
+
+RUN useradd -m -d /executor executor
+RUN chown -R executor /executor
+USER executor
+WORKDIR /executor
 
