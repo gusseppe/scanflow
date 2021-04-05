@@ -24,22 +24,22 @@ logging.getLogger().setLevel(logging.INFO)
 client = docker.from_env()
 
 
-def generate_compose(ad_paths, workflows, compose_type='repository'):
+def generate_compose(paths, workflows, compose_type='repository'):
 
     compose_dir = None
 
     if compose_type == 'repository':
-        compose_dic, main_file = compose_template_repo(ad_paths, workflows)
-        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-repository')
+        compose_dic, main_file = compose_template_repo(paths, workflows)
+        compose_dir = os.path.join(paths['meta_dir'], 'compose-repository')
     elif compose_type == 'verbose':
-        compose_dic, main_file = compose_template_verbose(ad_paths, workflows)
-        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-verbose')
+        compose_dic, main_file = compose_template_verbose(paths, workflows)
+        compose_dir = os.path.join(paths['meta_dir'], 'compose-verbose')
     elif compose_type == 'swarm':
-        compose_dic, main_file = compose_template_swarm(ad_paths, workflows)
-        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-swarm')
+        compose_dic, main_file = compose_template_swarm(paths, workflows)
+        compose_dir = os.path.join(paths['meta_dir'], 'compose-swarm')
     else:
-        compose_dic, main_file = compose_template_swarm(ad_paths, workflows)
-        compose_dir = os.path.join(ad_paths['ad_meta_dir'], 'compose-kubernetes')
+        compose_dic, main_file = compose_template_swarm(paths, workflows)
+        compose_dir = os.path.join(paths['meta_dir'], 'compose-kubernetes')
 
     os.makedirs(compose_dir, exist_ok=True)
     compose_path = os.path.join(compose_dir, 'docker-compose.yml')
@@ -58,7 +58,7 @@ def generate_compose(ad_paths, workflows, compose_type='repository'):
     return compose_path
 
 
-def compose_template_repo(ad_paths, workflows):
+def compose_template_repo(paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -71,7 +71,7 @@ def compose_template_repo(ad_paths, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['executors']:
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
@@ -81,7 +81,7 @@ def compose_template_repo(ad_paths, workflows):
                     'environment': {
                         'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{ad_paths['app_dir']}:/app",
+                    'volumes': [f"{paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
                     'tty': 'true'
 
@@ -90,7 +90,7 @@ def compose_template_repo(ad_paths, workflows):
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
                 f"tracker-{workflow['name']}": {
@@ -107,12 +107,12 @@ def compose_template_repo(ad_paths, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(ad_paths['app_dir'], id_date)
+    main_file = generate_main_file(paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
 
-def compose_template_verbose(ad_paths, workflows):
+def compose_template_verbose(paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -125,7 +125,7 @@ def compose_template_verbose(ad_paths, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['executors']:
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
@@ -135,7 +135,7 @@ def compose_template_verbose(ad_paths, workflows):
                     'environment': {
                         'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{ad_paths['app_dir']}:/app",
+                    'volumes': [f"{paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
                     # 'tty': 'true'
 
@@ -144,7 +144,7 @@ def compose_template_verbose(ad_paths, workflows):
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
                 f"tracker-{workflow['name']}": {
@@ -161,12 +161,12 @@ def compose_template_verbose(ad_paths, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(ad_paths['app_dir'], id_date)
+    main_file = generate_main_file(paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
 
-def compose_template_swarm(ad_paths, workflows):
+def compose_template_swarm(paths, workflows):
 
     compose_dic = {
         'version': '3',
@@ -179,7 +179,7 @@ def compose_template_swarm(ad_paths, workflows):
     for workflow in workflows:
         # Executors
         for node in workflow['executors']:
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             compose_dic['services'].update({
                 node['name']: {
                     'image': node['name'],
@@ -189,7 +189,7 @@ def compose_template_swarm(ad_paths, workflows):
                     'environment': {
                         'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"
                     },
-                    'volumes': [f"{ad_paths['app_dir']}:/app",
+                    'volumes': [f"{paths['app_dir']}:/app",
                                 f"{tracker_dir}:/mlflow"],
                     # 'tty': 'true'
 
@@ -198,7 +198,7 @@ def compose_template_swarm(ad_paths, workflows):
 
         # Trackers
         if 'tracker' in workflow.keys():
-            tracker_dir = os.path.join(ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}")
+            tracker_dir = os.path.join(paths['tracker_dir'], f"tracker-{workflow['name']}")
             port = workflow['tracker']['port']
             compose_dic['services'].update({
                 f"tracker-{workflow['name']}": {
@@ -215,7 +215,7 @@ def compose_template_swarm(ad_paths, workflows):
         net_name = f"network_{workflow['name']}"
         compose_dic['networks'].update({net_name: None})
 
-    main_file = generate_main_file(ad_paths['app_dir'], id_date)
+    main_file = generate_main_file(paths['app_dir'], id_date)
 
     return compose_dic, main_file
 
@@ -639,22 +639,22 @@ def check_verbosity(verbose):
 
 def get_scanflow_paths(app_dir):
     app_workflow_dir = os.path.join(app_dir, 'workflow')
-    ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
-    ad_meta_dir = os.path.join(ad_stuff_dir, 'ad-meta')
-    ad_tracker_dir = os.path.join(ad_stuff_dir, 'ad-tracker')
-    ad_checker_dir = os.path.join(ad_stuff_dir, 'ad-checker')
-    ad_checker_pred_dir = os.path.join(ad_checker_dir, 'predictions')
-    ad_checker_model_dir = os.path.join(ad_checker_dir, 'model')
-    ad_checker_scaler_dir = os.path.join(ad_checker_dir, 'scaler')
+    ad_stuff_dir = os.path.join(app_dir, 'stuff')
+    ad_meta_dir = os.path.join(stuff_dir, 'meta')
+    ad_tracker_dir = os.path.join(stuff_dir, 'tracker')
+    ad_checker_dir = os.path.join(stuff_dir, 'checker')
+    ad_checker_pred_dir = os.path.join(checker_dir, 'predictions')
+    ad_checker_model_dir = os.path.join(checker_dir, 'model')
+    ad_checker_scaler_dir = os.path.join(checker_dir, 'scaler')
     ad_paths = {'app_dir': app_dir,
                 'app_workflow_dir': app_workflow_dir,
-                'ad_stuff_dir': ad_stuff_dir,
-                'ad_meta_dir': ad_meta_dir,
-                'ad_tracker_dir': ad_tracker_dir,
-                'ad_checker_dir': ad_checker_dir,
-                'ad_checker_pred_dir': ad_checker_pred_dir,
-                'ad_checker_model_dir': ad_checker_model_dir,
-                'ad_checker_scaler_dir': ad_checker_scaler_dir}
+                'stuff_dir': ad_stuff_dir,
+                'meta_dir': ad_meta_dir,
+                'tracker_dir': ad_tracker_dir,
+                'checker_dir': ad_checker_dir,
+                'checker_pred_dir': ad_checker_pred_dir,
+                'checker_model_dir': ad_checker_model_dir,
+                'checker_scaler_dir': ad_checker_scaler_dir}
 
     return ad_paths
 
@@ -736,8 +736,8 @@ def run_step(step):
     return None
 
 
-def save_workflows(ad_paths, workflows):
-    meta_dir = ad_paths['ad_meta_dir']
+def save_workflows(paths, workflows):
+    meta_dir = ad_paths['meta_dir']
 
     workflows_metadata_name = 'workflows.json'
     workflows_metadata_path = os.path.join(meta_dir, workflows_metadata_name)
@@ -746,8 +746,8 @@ def save_workflows(ad_paths, workflows):
         json.dump(workflows, fout)
 
 
-def read_workflows(ad_paths):
-    meta_dir = ad_paths['ad_meta_dir']
+def read_workflows(paths):
+    meta_dir = ad_paths['meta_dir']
 
     workflows_metadata_name = 'workflows.json'
     workflows_metadata_path = os.path.join(meta_dir, workflows_metadata_name)

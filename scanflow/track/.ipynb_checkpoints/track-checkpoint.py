@@ -41,17 +41,17 @@ class Tracker:
         """
         # self.api_name = api_container_name
         self.app_dir = app_dir
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
+        self.paths = tools.get_scanflow_paths(app_dir)
         self.verbose = verbose
         tools.check_verbosity(verbose)
-        self.workflows = tools.read_workflows(self.ad_paths)
-        # self.ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
-        # self.ad_meta_dir = os.path.join(self.ad_stuff_dir, 'ad-meta')
-        # self.ad_tracker_dir = os.path.join(self.ad_stuff_dir, 'ad-tracker')
-        # self.ad_checker_dir = os.path.join(self.ad_stuff_dir, 'ad-checker')
-        # self.ad_checker_pred_dir = os.path.join(self.ad_checker_dir, 'predictions')
-        # self.ad_checker_model_dir = os.path.join(self.ad_checker_dir, 'model')
-        # self.ad_checker_scaler_dir = os.path.join(self.ad_checker_dir, 'scaler')
+        self.workflows = tools.read_workflows(self.paths)
+        # self.stuff_dir = os.path.join(app_dir, 'stuff')
+        # self.meta_dir = os.path.join(self.stuff_dir, 'meta')
+        # self.tracker_dir = os.path.join(self.stuff_dir, 'tracker')
+        # self.checker_dir = os.path.join(self.stuff_dir, 'checker')
+        # self.checker_pred_dir = os.path.join(self.checker_dir, 'predictions')
+        # self.checker_model_dir = os.path.join(self.checker_dir, 'model')
+        # self.checker_scaler_dir = os.path.join(self.checker_dir, 'scaler')
 
     def pipeline(self):
         # self.predict()

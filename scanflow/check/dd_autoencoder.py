@@ -192,15 +192,15 @@ def get_checker(X_train, X_test, ad_paths, date=None):
 
     X_test_orignal = X_test.copy()
 
-    X_train = scale(ad_paths['ad_checker_scaler_dir'], X_train)
-    X_test = scale(ad_paths['ad_checker_scaler_dir'], X_test)
+    X_train = scale(paths['checker_scaler_dir'], X_train)
+    X_test = scale(paths['checker_scaler_dir'], X_test)
     X_full = pd.concat([X_train, X_test], sort=False)
 
     X_train_noisy = add_noise(X_train)
 
-    model_path = os.path.join(ad_paths['ad_checker_model_dir'], 'saved_model.pb')
+    model_path = os.path.join(paths['checker_model_dir'], 'saved_model.pb')
     if os.path.isfile(model_path):
-        ddae_model = tf.keras.models.load_model(ad_paths['ad_checker_model_dir'])
+        ddae_model = tf.keras.models.load_model(paths['checker_model_dir'])
     else:
 
         NUM_EPOCHS=500
@@ -217,7 +217,7 @@ def get_checker(X_train, X_test, ad_paths, date=None):
                                       validation_split=0.1,
                                       #                   validation_data=(X_test_noisy, X_test),
                                       verbose=0)
-        ddae_model.save(ad_paths['ad_checker_model_dir'], save_format='tf')
+        ddae_model.save(paths['checker_model_dir'], save_format='tf')
 
     E_train = get_loss(ddae_model, X_train)
 

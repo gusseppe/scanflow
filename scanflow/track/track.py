@@ -4,6 +4,7 @@
 # License: BSD 3 clause
 
 import os
+import shutil
 
 import docker
 import logging
@@ -33,17 +34,17 @@ class Tracker:
         """
         # self.api_name = api_container_name
         self.app_dir = app_dir
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
+        self.paths = tools.get_scanflow_paths(app_dir)
         self.verbose = verbose
         tools.check_verbosity(verbose)
-        self.workflows = tools.read_workflows(self.ad_paths)
-        # self.ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
-        # self.ad_meta_dir = os.path.join(self.ad_stuff_dir, 'ad-meta')
-        # self.ad_tracker_dir = os.path.join(self.ad_stuff_dir, 'ad-tracker')
-        # self.ad_checker_dir = os.path.join(self.ad_stuff_dir, 'ad-checker')
-        # self.ad_checker_pred_dir = os.path.join(self.ad_checker_dir, 'predictions')
-        # self.ad_checker_model_dir = os.path.join(self.ad_checker_dir, 'model')
-        # self.ad_checker_scaler_dir = os.path.join(self.ad_checker_dir, 'scaler')
+        self.workflows = tools.read_workflows(self.paths)
+        # self.stuff_dir = os.path.join(app_dir, 'stuff')
+        # self.meta_dir = os.path.join(self.stuff_dir, 'meta')
+        # self.tracker_dir = os.path.join(self.stuff_dir, 'tracker')
+        # self.checker_dir = os.path.join(self.stuff_dir, 'checker')
+        # self.checker_pred_dir = os.path.join(self.checker_dir, 'predictions')
+        # self.checker_model_dir = os.path.join(self.checker_dir, 'model')
+        # self.checker_scaler_dir = os.path.join(self.checker_dir, 'scaler')
 
     def pipeline(self):
         # self.predict()
@@ -54,7 +55,24 @@ class Tracker:
         confirmation: str = input("Are you sure you want to delete all the tracked data?. (yes/no)" )
 
         if confirmation.lower() == 'yes':
-            print(self.ad_paths['ad_tracker_dir'])
+            backend_file = os.path.join(self.paths['tracker_dir'], 'backend.sqlite')
+            mlruns_artifacts = os.path.join(self.paths['tracker_dir'], 'mlruns')
+
+            try:
+                os.remove(backend_file)
+                logging.info(f"[Tracker] {backend_file} was removed successfully.")
+            except OSError as e:
+                logging.error(f"[Tracker] {e.filename} - {e.strerror}.")
+
+            try:
+                shutil.rmtree(mlruns_artifacts)
+                logging.info(f"[Tracker] {mlruns_artifacts} was removed successfully.")
+                # logging.info(f"[Tracker] Please stop and run the workflows again.")
+            except OSError as e:
+                logging.error(f"[Tracker] {e.filename} - {e.strerror}.")
+
+            logging.info(f"[Tracker] Please stop and run the workflows again.")
+
         elif confirmation.lower() == 'no':
             print("No changes were performed.")
         else:
@@ -136,7 +154,8 @@ class Tracker:
         tracker_uri = f"http://localhost:{tracker_port}"
 
         tracker = mlflow.tracking.MlflowClient(tracking_uri=tracker_uri)
-        tracker_dir = self.get_tracker_dir(workflow_name)
+        tracker_dir = self.paths['tracker_dir']
+        # tracker_dir = self.get_tracker_dir(workflow_name)
 
 
         if run_id is None: # Return the last experiment run

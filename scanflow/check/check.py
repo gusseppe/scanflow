@@ -43,7 +43,7 @@ class Checker:
         # self.api_name = api_container_name
         self.tracker = tracker
         self.app_dir = tracker.app_dir
-        self.ad_paths = tracker.ad_paths
+        self.paths = tracker.ad_paths
         self.verbose = verbose
         tools.check_verbosity(verbose)
         self.workflows = tracker.workflows
@@ -74,7 +74,7 @@ class Checker:
             response_json (dict): prediction.
         """
 
-        query = get_input_predictions(self.ad_paths['ad_checker_pred_dir'], periods=1)
+        query = get_input_predictions(self.paths['checker_pred_dir'], periods=1)
         date_file = query[0]['date']
         path_file = query[0]['path']
         data = query[0]['data']
@@ -90,8 +90,8 @@ class Checker:
             elif checker_type == 'dd_autoencoder':
                 from scanflow.check import dd_autoencoder
 
-                model, E_full, E_test, X_test = dd_autoencoder.get_checker(X_train, X_test, self.ad_paths, date=date_file)
-                # model, E_full, E_test, X_test = dd_autoencoder.get_checker(X_train, X_test, self.ad_paths, date=date_file)
+                model, E_full, E_test, X_test = dd_autoencoder.get_checker(X_train, X_test, self.paths, date=date_file)
+                # model, E_full, E_test, X_test = dd_autoencoder.get_checker(X_train, X_test, self.paths, date=date_file)
                 dd_autoencoder.plot_predictions(E_full, E_test)
                 logging.info(f"[+] Checker for file: [{path_file}] was run successfully.")
 

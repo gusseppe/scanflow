@@ -75,7 +75,7 @@ def load_mnist_c(corruption='scale'):
 
 def save_images(x):
     base_path = os.path.dirname(os.getcwd())
-    images = os.path.join(base_path, "examples/demo_mnist/data-science/workflow/mnist_sample/test_images.npy")
+    images = os.path.join(base_path, "examples/demo_mnist/workflow/mnist_sample/test_images.npy")
 
     with open(images, 'wb') as f:
         np.save(f, x)
@@ -93,12 +93,12 @@ def sample_train_mnist():
 
     base_path = os.path.dirname(os.getcwd())
     x_train_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/train_images.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/train_images.npy")
     with open(x_train_path, 'wb') as f:
         np.save(f, x_train_sample)
 
     y_train_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/train_labels.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/train_labels.npy")
     with open(y_train_path, 'wb') as f:
         np.save(f, y_train_sample)
         
@@ -115,12 +115,12 @@ def sample_test_mnist():
 
     base_path = os.path.dirname(os.getcwd())
     x_test_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/test_images.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/test_images.npy")
     with open(x_test_path, 'wb') as f:
         np.save(f, x_test_sample)
 
     y_test_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/test_labels.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/test_labels.npy")
     with open(y_test_path, 'wb') as f:
         np.save(f, y_test_sample)
         
@@ -138,12 +138,12 @@ def sample_test_mnist_c(corruption='stripe'):
 
     base_path = os.path.dirname(os.getcwd())
     x_test_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/test_images.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/test_images.npy")
     with open(x_test_path, 'wb') as f:
         np.save(f, x_test_sample)
 
     y_test_path = os.path.join(base_path,
-                                "examples/demo_mnist/data-science/workflow/mnist_sample/test_labels.npy")
+                                "examples/demo_mnist/workflow/mnist_sample/test_labels.npy")
     with open(y_test_path, 'wb') as f:
         np.save(f, y_test_sample)
         

@@ -48,14 +48,14 @@ class Setup2:
         """
         # self.app_type = app_type
         self.app_dir = app_dir
-        # self.ad_stuff_dir = os.path.join(app_dir, 'ad-stuff')
-        # self.ad_paths['ad_meta_dir'] = os.path.join(self.ad_stuff_dir, 'ad-meta')
-        # self.ad_paths['ad_tracker_dir'] = os.path.join(self.ad_stuff_dir, 'ad-tracker')
-        # self.ad_paths['ad_checker_dir ']= os.path.join(self.ad_stuff_dir, 'ad-checker')
-        # self.ad_paths['ad_checker_pred_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'predictions')
-        # self.ad_paths['ad_checker_model_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'model')
-        # self.ad_paths['ad_checker_scaler_dir ']= os.path.join(self.ad_paths['ad_checker_dir'], 'scaler')
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
+        # self.stuff_dir = os.path.join(app_dir, 'stuff')
+        # self.paths['meta_dir'] = os.path.join(self.stuff_dir, 'meta')
+        # self.paths['tracker_dir'] = os.path.join(self.stuff_dir, 'tracker')
+        # self.paths['checker_dir ']= os.path.join(self.stuff_dir, 'checker')
+        # self.paths['checker_pred_dir ']= os.path.join(self.paths['checker_dir'], 'predictions')
+        # self.paths['checker_model_dir ']= os.path.join(self.paths['checker_dir'], 'model')
+        # self.paths['checker_scaler_dir ']= os.path.join(self.paths['checker_dir'], 'scaler')
+        self.paths = tools.get_scanflow_paths(app_dir)
 
         self.workflows_user = [w.to_dict for w in workflows]
         # self.workflows_user = workflows
@@ -86,16 +86,16 @@ class Setup2:
 
         # Create scanflow directories for stuff
 
-        os.makedirs(self.ad_paths['ad_meta_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_tracker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_pred_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_model_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_scaler_dir'], exist_ok=True)
+        os.makedirs(self.paths['meta_dir'], exist_ok=True)
+        os.makedirs(self.paths['tracker_dir'], exist_ok=True)
+        os.makedirs(self.paths['checker_dir'], exist_ok=True)
+        os.makedirs(self.paths['checker_pred_dir'], exist_ok=True)
+        os.makedirs(self.paths['checker_model_dir'], exist_ok=True)
+        os.makedirs(self.paths['checker_scaler_dir'], exist_ok=True)
 
         compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
         for c_type in compose_types:
-            compose_path = tools.generate_compose(self.ad_paths,
+            compose_path = tools.generate_compose(self.paths,
                                                   self.workflows_user,
                                                   compose_type=c_type)
 
@@ -137,13 +137,13 @@ class Setup2:
             env_image_name = f"{wflow['name']}"
 
             # Save each python file to compose-verbose folder
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
             source = os.path.join(self.app_dir, 'workflow', wflow['file'])
             copy2(source, meta_compose_dir)
 
             # Create Dockerfile if needed
             if 'requirements' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
                 # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
@@ -159,7 +159,7 @@ class Setup2:
                 environments.append(metadata)
 
             elif 'dockerfile' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
                 # os.makedirs(meta_compose_dir, exist_ok=True)
 
                 dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
@@ -188,7 +188,7 @@ class Setup2:
 
         if 'tracker' in workflow.keys():
             port = workflow['tracker']['port']
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
             # os.makedirs(meta_compose_dir, exist_ok=True)
             # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
             dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
@@ -198,7 +198,7 @@ class Setup2:
             # copy2(dockerfile_path, meta_compose_dir)
 
             tracker_image_name = f"tracker-{workflow['name']}"
-            tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
+            tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
             metadata = tools.build_image(tracker_image_name, meta_compose_dir,
                                          dockerfile_path, 'tracker', port, tracker_dir)
             # metadata = tools.build_image(tracker_image_name, self.app_dir,
@@ -267,7 +267,7 @@ class Setup2:
                 host_path = self.app_dir
                 container_path = '/app'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'], f"tracker-{workflow['name']}" )
 
                 workflow_tracker_dir_ctn = '/mlflow'
                 volume = {host_path: {'bind': container_path, 'mode': 'rw'},
@@ -290,7 +290,7 @@ class Setup2:
             containers.append({'name': env_image_name, 'ctn': env_container})
 
         if 'tracker' in workflow.keys():
-            workflow_tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+            workflow_tracker_dir = os.path.join(self.paths['tracker_dir'], f"tracker-{workflow['name']}" )
             os.makedirs(workflow_tracker_dir, exist_ok=True)
 
             # host_path = self.app_dir

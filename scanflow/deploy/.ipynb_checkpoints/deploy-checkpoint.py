@@ -42,7 +42,7 @@ class Deploy:
         #     self.single_app_dir = environment.single_app_dir
 
         self.app_dir = app_dir
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
+        self.paths = tools.get_scanflow_paths(app_dir)
         self.verbose = verbose
         if workflower is not None:
             self.workflows_user = workflower.workflows_user
@@ -126,7 +126,7 @@ class Deploy:
                 host_path = self.app_dir
                 container_path = '/app'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'], f"tracker-{workflow['name']}" )
 
                 workflow_tracker_dir_ctn = '/mlflow'
                 volume = {host_path: {'bind': container_path, 'mode': 'rw'},
@@ -149,7 +149,7 @@ class Deploy:
             containers.append({'name': env_image_name, 'ctn': env_container})
 
         if 'tracker' in workflow.keys():
-            workflow_tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+            workflow_tracker_dir = os.path.join(self.paths['tracker_dir'], f"tracker-{workflow['name']}" )
             os.makedirs(workflow_tracker_dir, exist_ok=True)
 
             # host_path = self.app_dir
@@ -420,15 +420,15 @@ class Deploy:
         url = f'http://localhost:{port}/invocations'
 
         try:
-            input_path = os.path.join(self.ad_paths['app_workflow_dir'], input_name)
+            input_path = os.path.join(self.paths['app_workflow_dir'], input_name)
             self.input_pred_df = tools.predict(input_path, port)
 
             # id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
             # input_pred_filename = f'input_predictions_{id_date}.csv'
-            # pred_path = os.path.join(self.ad_paths['ad_checker_dir'],
+            # pred_path = os.path.join(self.paths['checker_dir'],
             #                          input_pred_filename)
             # self.input_pred_df.to_csv(pred_path, index=False)
-            # logging.info(f"Input and predictions were saved at: {self.ad_paths['ad_checker_dir']}")
+            # logging.info(f"Input and predictions were saved at: {self.paths['checker_dir']}")
             self.save_predictions(self.input_pred_df)
 
             return self.input_pred_df
@@ -448,7 +448,7 @@ class Deploy:
         """
         id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         input_pred_filename = f'input_predictions_{id_date}.csv'
-        pred_path = os.path.join(self.ad_paths['ad_checker_pred_dir'],
+        pred_path = os.path.join(self.paths['checker_pred_dir'],
                                  input_pred_filename)
         input_pred_df.to_csv(pred_path, index=False)
         logging.info(f"Input and predictions were saved at: {pred_path}")

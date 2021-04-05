@@ -50,7 +50,7 @@ class Setup:
         """
         # self.app_type = app_type
         self.app_dir = app_dir
-        self.ad_paths = tools.get_scanflow_paths(app_dir)
+        self.paths = tools.get_scanflow_paths(app_dir)
         self.workflows_user = [w.to_dict for w in workflows]
         self.verbose = verbose
         tools.check_verbosity(verbose)
@@ -170,56 +170,56 @@ class Setup:
         """)
         return _repr
 
-    def draw_workflow(self, name:str = 'graph'):
-        # for wf_user in self.workflows_user:
-        #     workflow = {'name': wf_user['name'],
-        #                 'nodes': wf_user['executors']}
-        #     self.workflows.append(workflow)
+    # def draw_workflow(self, name:str = 'graph'):
+    #     # for wf_user in self.workflows_user:
+    #     #     workflow = {'name': wf_user['name'],
+    #     #                 'nodes': wf_user['executors']}
+    #     #     self.workflows.append(workflow)
+    #
+    #     graph = tools.workflow_to_graph(self.workflows, name)
+    #     tools.draw_graph(graph)
 
-        graph = tools.workflow_to_graph(self.workflows, name)
-        tools.draw_graph(graph)
-
-    def save_envs(self, registry_name: str):
-        """
-        Run an image that yields a environment.
-
-        Parameters:
-            registry_name (str): Name of registry to save.
-
-        Returns:
-            containers (object): Docker container.
-        """
-        for wflow in self.workflows:
-            print(wflow)
-            for container in wflow['ctns']:
-                if 'tracker' not in container['name']:
-                    self.save_env(container, registry_name)
-
-
-    def save_env(self, container, registry_name):
-        """
-        Run an image that yields a environment.
-
-        Parameters:
-            registry_name (str): Name of registry to save.
-
-        Returns:
-            containers (object): Docker container.
-
-        TODO:
-            Handle when an env already exists in repo
-        """
-        try:
-            # for name_ctn, ctn in self.env_container.items():
-            container['ctn'].commit(repository=registry_name,
-                                    tag=container['name'],
-                                    message='First commit')
-
-            logging.info(f"[+] Environment [{container['name']}] was saved to registry [{registry_name}].")
-
-        except docker.api.client.DockerException as e:
-            logging.error(f"{e}")
-            logging.error(f"[-] Saving [{container['name']}] failed.", exc_info=True)
+    # def save_envs(self, registry_name: str):
+    #     """
+    #     Run an image that yields a environment.
+    #
+    #     Parameters:
+    #         registry_name (str): Name of registry to save.
+    #
+    #     Returns:
+    #         containers (object): Docker container.
+    #     """
+    #     for wflow in self.workflows:
+    #         print(wflow)
+    #         for container in wflow['ctns']:
+    #             if 'tracker' not in container['name']:
+    #                 self.save_env(container, registry_name)
+    #
+    #
+    # def save_env(self, container, registry_name):
+    #     """
+    #     Run an image that yields a environment.
+    #
+    #     Parameters:
+    #         registry_name (str): Name of registry to save.
+    #
+    #     Returns:
+    #         containers (object): Docker container.
+    #
+    #     TODO:
+    #         Handle when an env already exists in repo
+    #     """
+    #     try:
+    #         # for name_ctn, ctn in self.env_container.items():
+    #         container['ctn'].commit(repository=registry_name,
+    #                                 tag=container['name'],
+    #                                 message='First commit')
+    #
+    #         logging.info(f"[+] Environment [{container['name']}] was saved to registry [{registry_name}].")
+    #
+    #     except docker.api.client.DockerException as e:
+    #         logging.error(f"{e}")
+    #         logging.error(f"[-] Saving [{container['name']}] failed.", exc_info=True)
 
 
 class Node(object):

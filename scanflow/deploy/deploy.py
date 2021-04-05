@@ -24,33 +24,23 @@ client = docker.from_env()
 
 class Deploy:
     def __init__(self,
-                 # app_dir=None,
-                 workflower=None,
-                 verbose=True):
+                 workflower=None):
         """
         Example:
-            deployer = Deploy(platform)
+            deployer = Deploy(setup)
 
         Parameters:
-            workflower (str): The platform that comes from setup class.
-            verbose (bool): Activate logging or not.
+            workflower:  Setup class.
 
         """
-        # if environment is not None:
-        #     self.platform = environment
-        #     self.env_container = environment.env_container
-        #     self.app_type = environment.app_type
-        #     self.workflow = environment.workflow
-        #     self.single_app_dir = environment.single_app_dir
 
-        self.verbose = verbose
         if workflower is not None:
             self.workflows_user = workflower.workflows_user
             self.app_dir = workflower.app_dir
-            self.ad_paths = tools.get_scanflow_paths(workflower.app_dir)
+            self.paths = tools.get_scanflow_paths(workflower.app_dir)
         else:
             self.workflows_user = None
-        tools.check_verbosity(verbose)
+        # tools.check_verbosity(verbose)
         self.logs_workflow = None
         self.logs_build_image = None
         self.logs_run_ctn = None
@@ -69,32 +59,34 @@ class Deploy:
 
         # return self
 
-    def build_workflows(self):
+    def build_workflows(self, verbose: bool = False):
         """
         Build a environment with Docker images.
 
         Parameters:
-            mlproject_name (str): Prefix of a Docker image.
+            :param verbose: Activate logging.
         Returns:
             image (object): Docker image.
         """
 
         # Create scanflow directories for stuff
 
+        tools.check_verbosity(verbose)
+
         self.workflows = list()
 
-        os.makedirs(self.ad_paths['ad_meta_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_tracker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['ad_checker_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['improver_dir'], exist_ok=True)
-        os.makedirs(self.ad_paths['planner_dir'], exist_ok=True)
-        # os.makedirs(self.ad_paths['ad_checker_pred_dir'], exist_ok=True)
-        # os.makedirs(self.ad_paths['ad_checker_model_dir'], exist_ok=True)
-        # os.makedirs(self.ad_paths['ad_checker_scaler_dir'], exist_ok=True)
+        os.makedirs(self.paths['meta_dir'], exist_ok=True)
+        os.makedirs(self.paths['tracker_agent_dir'], exist_ok=True)
+        os.makedirs(self.paths['checker_agent_dir'], exist_ok=True)
+        os.makedirs(self.paths['improver_agent_dir'], exist_ok=True)
+        os.makedirs(self.paths['planner_agent_dir'], exist_ok=True)
+
+        # Consider generate agent on deman
+        tools.generate_agents(self.paths)
 
         compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
         for c_type in compose_types:
-            compose_path = tools.generate_compose(self.ad_paths,
+            compose_path = tools.generate_compose(self.paths,
                                                   self.workflows_user,
                                                   compose_type=c_type)
 
@@ -110,7 +102,7 @@ class Deploy:
 
             self.workflows.append(workflow)
 
-        tools.save_workflows(self.ad_paths, self.workflows)
+        tools.save_workflows(self.paths, self.workflows)
 
     def __build_workflow(self, workflow: dict):
         """
@@ -138,17 +130,13 @@ class Deploy:
             env_image_name = f"{wflow['name']}"
 
             # Save each python file to compose-verbose folder
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+            meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
             source = os.path.join(self.app_dir, 'workflow', wflow['file'])
             copy2(source, meta_compose_dir)
 
             # Create Dockerfile if needed
             if 'requirements' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-                # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
-                # os.makedirs(meta_compose_dir, exist_ok=True)
-
-                # dockerfile_path = tools.generate_dockerfile(meta_compose_dir, environment=wflow)
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
                 dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                             executor=wflow,
                                                             dock_type='executor',
@@ -160,8 +148,7 @@ class Deploy:
                 environments.append(metadata)
 
             elif 'dockerfile' in wflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-                # os.makedirs(meta_compose_dir, exist_ok=True)
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
 
                 dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
                 dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
@@ -172,13 +159,8 @@ class Deploy:
             elif 'env' in wflow.keys():  # the provided image name exists in repository
                 try:
                     env_name_from_repo = wflow['env']
-                    # env_tag = wflow['name']
 
                     image_from_repo = client.images.get(env_name_from_repo)
-                    # environments.append({'name': env_image_name,
-                    #                      'image': image_from_repo,
-                    #                      'type': 'executor',
-                    #                      'port': None})
                     environments.append({'name': env_image_name,
                                          'image': image_from_repo.tags,
                                          'type': 'executor'})
@@ -189,9 +171,7 @@ class Deploy:
 
         if 'tracker' in workflow.keys():
             port = workflow['tracker']['port']
-            meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-            # os.makedirs(meta_compose_dir, exist_ok=True)
-            # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+            meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
             dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                         executor=workflow,
                                                         dock_type='tracker',
@@ -199,7 +179,7 @@ class Deploy:
 
 
             tracker_image_name = f"tracker-{workflow['name']}"
-            tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
+            tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
             metadata = tools.build_image(tracker_image_name, meta_compose_dir,
                                          dockerfile_path, 'tracker', port, tracker_dir)
             # metadata = tools.build_image(tracker_image_name, self.app_dir,
@@ -214,7 +194,7 @@ class Deploy:
                                                                   port=port_agent)
 
                 tracker_agent_image_name = f"tracker-agent-{workflow['name']}"
-                tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], tracker_image_name )
+                tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
                 metadata = tools.build_image(tracker_agent_image_name, meta_compose_dir,
                                              dockerfile_agent_path, 'tracker-agent', port_agent, tracker_dir)
 
@@ -222,9 +202,7 @@ class Deploy:
 
             if 'checker' in workflow.keys():
                 port = workflow['checker']['port']
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
-                # os.makedirs(meta_compose_dir, exist_ok=True)
-                # dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
                 dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                             executor=workflow,
                                                             dock_type='checker',
@@ -232,7 +210,7 @@ class Deploy:
 
 
                 checker_image_name = f"checker-{workflow['name']}"
-                checker_dir = os.path.join(self.ad_paths['ad_checker_dir'], checker_image_name )
+                checker_dir = os.path.join(self.paths['checker_dir'], checker_image_name )
                 metadata = tools.build_image(checker_image_name, meta_compose_dir,
                                              dockerfile_path, 'checker', port, checker_dir)
                 # metadata = tools.build_image(tracker_image_name, self.app_dir,
@@ -247,14 +225,14 @@ class Deploy:
                                                                       port=port_agent)
 
                     checker_agent_image_name = f"checker-agent-{workflow['name']}"
-                    checker_dir = os.path.join(self.ad_paths['ad_checker_dir'], checker_agent_image_name )
+                    checker_dir = os.path.join(self.paths['checker_dir'], checker_agent_image_name )
                     metadata = tools.build_image(checker_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'checker-agent', port_agent, checker_dir)
 
                     environments.append(metadata)
 
             if 'improver' in workflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
 
                 if workflow['improver']['mode'] == 'online':
                     port_agent = workflow['improver']['port']
@@ -264,7 +242,7 @@ class Deploy:
                                                                       port=port_agent)
 
                     improver_agent_image_name = f"improver-agent-{workflow['name']}"
-                    improver_dir = os.path.join(self.ad_paths['improver_dir'], improver_agent_image_name )
+                    improver_dir = os.path.join(self.paths['improver_dir'], improver_agent_image_name )
                     metadata = tools.build_image(improver_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'improver-agent', port_agent, improver_dir)
 
@@ -273,7 +251,7 @@ class Deploy:
                     raise ValueError('Improver can be only deployed in online mode. Please set mode=online.')
 
             if 'planner' in workflow.keys():
-                meta_compose_dir = os.path.join(self.ad_paths['ad_meta_dir'], 'compose-verbose')
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
 
                 if workflow['planner']['mode'] == 'online':
                     port_agent = workflow['planner']['port']
@@ -283,7 +261,7 @@ class Deploy:
                                                                       port=port_agent)
 
                     planner_agent_image_name = f"planner-agent-{workflow['name']}"
-                    planner_dir = os.path.join(self.ad_paths['planner_dir'], planner_agent_image_name )
+                    planner_dir = os.path.join(self.paths['planner_dir'], planner_agent_image_name )
                     metadata = tools.build_image(planner_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'planner-agent', port_agent, planner_dir)
 
@@ -295,19 +273,17 @@ class Deploy:
 
         return environments
 
-    def start_workflows(self, **kwargs):
+    def start_workflows(self, verbose: bool = False, **kwargs):
         """
         Start environments (Docker image)
 
-        Parameters:
-            name (str): Docker container name for dashbGoard.
-            port (dict): Dictionary describing ports to bind.
-                Example: {'8001/tcp': 8001}
-            tracker (bool): If a tracker should be activated.
-
-        Returns:
-            containers (object): Docker container.
+        :param verbose: Activate logging.
+        :param kwargs: Additional arguments.
+        :return: containers (object): Docker container.
         """
+
+        tools.check_verbosity(verbose)
+
         if self.workflows_user is not None:
             for wflow_user in tqdm(self.workflows_user):
                 logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
@@ -323,16 +299,10 @@ class Deploy:
 
     def __start_workflow(self, workflow, **kwargs):
         """
-        Run an the environment (Docker image)
 
-        Parameters:
-            name (str): Docker container name for dashboard.
-            port (dict): Dictionary describing ports to bind.
-                Example: {'8001/tcp': 8001}
-            tracker (bool): If a tracker should be activated.
-
-        Returns:
-            containers (object): Docker container.
+        :param workflow:
+        :param kwargs:
+        :return:
         """
 
         # Create network for workflow
@@ -355,7 +325,7 @@ class Deploy:
                 host_path = self.app_dir
                 container_path = '/executor'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
 
                 workflow_tracker_dir_ctn = '/mlflow'
 
@@ -407,7 +377,7 @@ class Deploy:
         if 'tracker' in workflow.keys():
             list_containers = []
 
-            workflow_tracker_dir = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+            workflow_tracker_dir = os.path.join(self.paths['tracker_dir'])
             os.makedirs(workflow_tracker_dir, exist_ok=True)
 
             # host_path = self.app_dir
@@ -469,13 +439,13 @@ class Deploy:
 
             if 'checker' in workflow.keys():
                 kwargs = dict()
-                workflow_checker_dir = self.ad_paths['ad_checker_dir']
+                workflow_checker_dir = self.paths['checker_dir']
                 host_path = workflow_checker_dir
-                # host_path = os.path.join(self.ad_paths['ad_checker_dir'], f"checker-{workflow['name']}" )
+                # host_path = os.path.join(self.paths['checker_dir'], f"checker-{workflow['name']}" )
                 os.makedirs(host_path, exist_ok=True)
                 container_path = '/checker'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
@@ -528,13 +498,13 @@ class Deploy:
 
             if 'improver' in workflow.keys():
                 kwargs = dict()
-                workflow_improver_dir = self.ad_paths['improver_dir']
+                workflow_improver_dir = self.paths['improver_dir']
                 host_path = workflow_improver_dir
-                # host_path = os.path.join(self.ad_paths['ad_improver_dir'], f"improver-{workflow['name']}" )
+                # host_path = os.path.join(self.paths['improver_dir'], f"improver-{workflow['name']}" )
                 os.makedirs(host_path, exist_ok=True)
                 # container_path = '/improver'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
@@ -585,13 +555,13 @@ class Deploy:
 
             if 'planner' in workflow.keys():
                 kwargs = dict()
-                workflow_planner_dir = self.ad_paths['planner_dir']
+                workflow_planner_dir = self.paths['planner_dir']
                 host_path = workflow_planner_dir
-                # host_path = os.path.join(self.ad_paths['ad_planner_dir'], f"planner-{workflow['name']}" )
+                # host_path = os.path.join(self.paths['planner_dir'], f"planner-{workflow['name']}" )
                 os.makedirs(host_path, exist_ok=True)
                 container_path = '/planner'
 
-                workflow_tracker_dir_host = os.path.join(self.ad_paths['ad_tracker_dir'], f"tracker-{workflow['name']}" )
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
@@ -761,17 +731,15 @@ class Deploy:
                 # logging.error(f"{e}")
                 logging.info(f"[+] Network: [{net_name}] is not running in local.")
 
-    def run_workflows(self):
+    def run_workflows(self, verbose: bool = False):
         """
-        Build a environment with Docker images.
-
-        Parameters:
-            mlproject_name (str): Prefix of a Docker image.
-        Returns:
-            image (object): Docker image.
+        :param verbose:
+        :return:
         """
 
         import time
+
+        tools.check_verbosity(verbose)
 
         start = time.time()
         for wf_user in tqdm(self.workflows_user):
@@ -798,8 +766,7 @@ class Deploy:
         Returns:
             image (object): Docker image.
         """
-        # logging.info(f'Running workflow: type={self.app_type} .')
-        # logging.info(f'[+] Running workflow on [{env_container_name}].')
+
         containers = []
 
         if parallel:
@@ -1040,15 +1007,15 @@ class Deploy:
         url = f'http://localhost:{port}/invocations'
 
         try:
-            input_path = os.path.join(self.ad_paths['app_workflow_dir'], input_name)
+            input_path = os.path.join(self.paths['app_workflow_dir'], input_name)
             self.input_pred_df = tools.predict(input_path, port)
 
             # id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
             # input_pred_filename = f'input_predictions_{id_date}.csv'
-            # pred_path = os.path.join(self.ad_paths['ad_checker_dir'],
+            # pred_path = os.path.join(self.paths['checker_dir'],
             #                          input_pred_filename)
             # self.input_pred_df.to_csv(pred_path, index=False)
-            # logging.info(f"Input and predictions were saved at: {self.ad_paths['ad_checker_dir']}")
+            # logging.info(f"Input and predictions were saved at: {self.paths['checker_dir']}")
             self.save_predictions(self.input_pred_df)
 
             return self.input_pred_df
@@ -1068,7 +1035,7 @@ class Deploy:
         """
         id_date = datetime.datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
         input_pred_filename = f'input_predictions_{id_date}.csv'
-        pred_path = os.path.join(self.ad_paths['ad_checker_pred_dir'],
+        pred_path = os.path.join(self.paths['checker_pred_dir'],
                                  input_pred_filename)
         input_pred_df.to_csv(pred_path, index=False)
         logging.info(f"Input and predictions were saved at: {pred_path}")
