@@ -513,7 +513,7 @@ def run_environment(name, network, volume=None, port=None, environment=None):
     container_from_env = None
     pass
 
-def start_network(name):
+def create_network(name):
 
     net_from_env = None
 

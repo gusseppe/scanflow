@@ -109,7 +109,7 @@ class Deploy:
         # Create network for workflow
 
         net_name = f"network_{workflow['name']}"
-        tools.start_network(name=net_name)
+        tools.create_network(name=net_name)
 
         containers = []
         for wflow in workflow['executors']:

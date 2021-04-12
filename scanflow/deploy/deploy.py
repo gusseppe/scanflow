@@ -14,6 +14,8 @@ from tqdm import tqdm
 from scanflow import tools
 from textwrap import dedent
 from multiprocessing import Pool
+from scanflow.setup.setup import Setup
+# from typing import List, Dict
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
@@ -33,18 +35,24 @@ class Deploy:
             workflower:  Setup class.
 
         """
-
-        if workflower is not None:
+        if workflower and isinstance(workflower, Setup):
             self.workflows_user = workflower.workflows_user
             self.app_dir = workflower.app_dir
-            self.paths = tools.get_scanflow_paths(workflower.app_dir)
+            self.paths = tools.get_scanflow_paths(self.app_dir)
+        elif workflower and isinstance(workflower, dict):
+            self.workflows_user = [workflower]
+            self.app_dir = workflower['app_dir']
+            self.paths = tools.get_scanflow_paths(self.app_dir)
+
+        # if workflower is not None:
+        #     self.workflows_user = workflower.workflows_user
+        #     self.app_dir = workflower.app_dir
+        #     self.paths = tools.get_scanflow_paths(workflower.app_dir)
         else:
             self.workflows_user = None
         # tools.check_verbosity(verbose)
-        self.logs_workflow = None
+        self.logs_run_workflow = list()
         self.logs_build_image = None
-        self.logs_run_ctn = None
-        self.api_container_object = None
         self.predictor_repr = None
         self.input_pred_df = None
         self.workflows = list()
@@ -73,6 +81,12 @@ class Deploy:
 
         tools.check_verbosity(verbose)
 
+        # Create the scanflow network and get the gateway ip
+        net_name = f"network_scanflow"
+        tools.create_network(name=net_name)
+        network_scanflow = client.networks.get('network_scanflow')
+        gateway = network_scanflow.attrs['IPAM']['Config'][0]['Gateway']
+
         self.workflows = list()
 
         os.makedirs(self.paths['meta_dir'], exist_ok=True)
@@ -81,8 +95,6 @@ class Deploy:
         os.makedirs(self.paths['improver_agent_dir'], exist_ok=True)
         os.makedirs(self.paths['planner_agent_dir'], exist_ok=True)
 
-        # Consider generate agent on deman
-        tools.generate_agents(self.paths)
 
         compose_types = ['repository', 'verbose', 'swarm', 'kubernetes']
         for c_type in compose_types:
@@ -92,6 +104,9 @@ class Deploy:
 
         for wf_user in self.workflows_user:
             logging.info(f"[++] Building workflow: [{wf_user['name']}].")
+            # Consider generate agent on demand
+            # tools.generate_agents(self.paths, wf_user['name'], self.app_dir, gateway)
+
             environments = self.__build_workflow(wf_user)
             # environments, tracker = self.build_workflow(wf_user)
             logging.info(f"[+] Workflow: [{wf_user['name']}] was built successfully.")
@@ -99,10 +114,15 @@ class Deploy:
                         'nodes': environments}
             # 'type': 'execution node',
             # 'tracker': tracker}
+            workflow_to_save = wf_user.copy()
+            workflow_to_save.update({'app_dir': self.app_dir})
+            tools.save_workflow(workflow_to_save, wf_user['name'],
+                                self.paths['meta_dir'])
 
             self.workflows.append(workflow)
 
-        tools.save_workflows(self.paths, self.workflows)
+        # tools.save_workflows(self.paths, self.workflows_user)
+        # tools.save_workflows(self.paths, self.workflows)
 
     def __build_workflow(self, workflow: dict):
         """
@@ -115,50 +135,43 @@ class Deploy:
         """
 
         environments = []
-        for wflow in workflow['executors']:
-            # mlproject_path = tools.generate_mlproject(self.app_dir,
-            #                                           environment=wflow,
-            #                                           wflow_name=workflow['name'])
+        for executor in workflow['executors']:
 
-            # compose_path = tools.generate_compose(self.app_dir,
-            #                                       environment=wflow,
-            #                                       wflow=workflow)
+            logging.info(f"[+] Building env: [{workflow['name']}:{executor['name']}].")
 
-            logging.info(f"[+] Building env: [{workflow['name']}:{wflow['name']}].")
-            # if self.app_type == 'single':
-
-            env_image_name = f"{wflow['name']}"
+            env_image_name = f"{workflow['name']}-{executor['name']}"
+            # env_image_name = f"{executor['name']}"
 
             # Save each python file to compose-verbose folder
             meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
-            source = os.path.join(self.app_dir, 'workflow', wflow['file'])
+            source = os.path.join(self.app_dir, 'workflow', executor['file'])
             copy2(source, meta_compose_dir)
 
             # Create Dockerfile if needed
-            if 'requirements' in wflow.keys():
+            if 'requirements' in executor.keys():
                 meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
                 dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
-                                                            executor=wflow,
                                                             dock_type='executor',
+                                                            executor=executor,
                                                             port=None)
-                source = os.path.join(self.app_dir, 'workflow', wflow['requirements'])
+                source = os.path.join(self.app_dir, 'workflow', executor['requirements'])
                 copy2(source, meta_compose_dir)
                 # metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
                 metadata = tools.build_image(env_image_name, meta_compose_dir, dockerfile_path)
                 environments.append(metadata)
 
-            elif 'dockerfile' in wflow.keys():
+            elif 'dockerfile' in executor.keys():
                 meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
 
                 dockerfile_dir = os.path.join(self.app_dir, 'workflow') #context
-                dockerfile_path = os.path.join(dockerfile_dir, wflow['dockerfile'])
+                dockerfile_path = os.path.join(dockerfile_dir, executor['dockerfile'])
                 copy2(dockerfile_path, meta_compose_dir)
                 metadata = tools.build_image(env_image_name, dockerfile_dir, dockerfile_path)
                 environments.append(metadata)
 
-            elif 'env' in wflow.keys():  # the provided image name exists in repository
+            elif 'env' in executor.keys():  # the provided image name exists in repository
                 try:
-                    env_name_from_repo = wflow['env']
+                    env_name_from_repo = executor['env']
 
                     image_from_repo = client.images.get(env_name_from_repo)
                     environments.append({'name': env_image_name,
@@ -178,7 +191,7 @@ class Deploy:
                                                         port=port)
 
 
-            tracker_image_name = f"tracker-{workflow['name']}"
+            tracker_image_name = f"tracker-mlflow"
             tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
             metadata = tools.build_image(tracker_image_name, meta_compose_dir,
                                          dockerfile_path, 'tracker', port, tracker_dir)
@@ -193,7 +206,7 @@ class Deploy:
                                                                   dock_type='tracker_agent',
                                                                   port=port_agent)
 
-                tracker_agent_image_name = f"tracker-agent-{workflow['name']}"
+                tracker_agent_image_name = f"{workflow['name']}-tracker-agent"
                 tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
                 metadata = tools.build_image(tracker_agent_image_name, meta_compose_dir,
                                              dockerfile_agent_path, 'tracker-agent', port_agent, tracker_dir)
@@ -201,30 +214,32 @@ class Deploy:
                 environments.append(metadata)
 
             if 'checker' in workflow.keys():
-                port = workflow['checker']['port']
                 meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
-                dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
-                                                            executor=workflow,
-                                                            dock_type='checker',
-                                                            port=port)
-
-
-                checker_image_name = f"checker-{workflow['name']}"
-                checker_dir = os.path.join(self.paths['checker_dir'], checker_image_name )
-                metadata = tools.build_image(checker_image_name, meta_compose_dir,
-                                             dockerfile_path, 'checker', port, checker_dir)
-                # metadata = tools.build_image(tracker_image_name, self.app_dir,
-                #                              dockerfile_path, 'tracker', port)
-                environments.append(metadata)
+                # port = workflow['checker']['port']
+                # meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
+                # dockerfile_path = tools.generate_dockerfile(folder=meta_compose_dir,
+                #                                             executor=workflow,
+                #                                             dock_type='checker',
+                #                                             port=port)
+                #
+                #
+                # checker_image_name = f"{workflow['name']}-checker-detector"
+                # checker_dir = os.path.join(self.paths['checker_dir'], checker_image_name )
+                # metadata = tools.build_image(checker_image_name, meta_compose_dir,
+                #                              dockerfile_path, 'checker', port, checker_dir)
+                # # metadata = tools.build_image(tracker_image_name, self.app_dir,
+                # #                              dockerfile_path, 'tracker', port)
+                # environments.append(metadata)
 
                 if workflow['checker']['mode'] == 'online':
-                    port_agent = port + 1
+                    port_agent = workflow['checker']['port']
+                    # port_agent = port + 1
                     dockerfile_agent_path = tools.generate_dockerfile(folder=meta_compose_dir,
                                                                       executor=workflow,
                                                                       dock_type='checker_agent',
                                                                       port=port_agent)
 
-                    checker_agent_image_name = f"checker-agent-{workflow['name']}"
+                    checker_agent_image_name = f"{workflow['name']}-checker-agent"
                     checker_dir = os.path.join(self.paths['checker_dir'], checker_agent_image_name )
                     metadata = tools.build_image(checker_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'checker-agent', port_agent, checker_dir)
@@ -241,7 +256,7 @@ class Deploy:
                                                                       dock_type='improver_agent',
                                                                       port=port_agent)
 
-                    improver_agent_image_name = f"improver-agent-{workflow['name']}"
+                    improver_agent_image_name = f"{workflow['name']}-improver-agent"
                     improver_dir = os.path.join(self.paths['improver_dir'], improver_agent_image_name )
                     metadata = tools.build_image(improver_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'improver-agent', port_agent, improver_dir)
@@ -260,7 +275,7 @@ class Deploy:
                                                                       dock_type='planner_agent',
                                                                       port=port_agent)
 
-                    planner_agent_image_name = f"planner-agent-{workflow['name']}"
+                    planner_agent_image_name = f"{workflow['name']}-planner-agent"
                     planner_dir = os.path.join(self.paths['planner_dir'], planner_agent_image_name )
                     metadata = tools.build_image(planner_agent_image_name, meta_compose_dir,
                                                  dockerfile_agent_path, 'planner-agent', port_agent, planner_dir)
@@ -269,6 +284,28 @@ class Deploy:
                 else:
                     raise ValueError('Planner can be only deployed in online mode. Please set mode=online.')
 
+            if 'predictor' in workflow.keys():
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
+
+                # if workflow['predictor']['mode'] == 'online':
+                model = workflow['predictor']['model']
+                version = workflow['predictor']['version']
+                port_agent = workflow['predictor']['port']
+                dockerfile_agent_path = tools.generate_dockerfile(folder=meta_compose_dir,
+                                                                  dock_type='predictor',
+                                                                  executor=workflow,
+                                                                  port=port_agent,
+                                                                  model=model,
+                                                                  version=version)
+
+                predictor_image_name = f"{workflow['name']}-predictor"
+                predictor_dir = os.path.join(self.paths['predictor_dir'], predictor_image_name )
+                metadata = tools.build_image(predictor_image_name, meta_compose_dir,
+                                             dockerfile_agent_path, 'predictor', port_agent, predictor_dir)
+
+                environments.append(metadata)
+                # else:
+                #     raise ValueError('Planner can be only deployed in online mode. Please set mode=online.')
             return environments
 
         return environments
@@ -307,19 +344,21 @@ class Deploy:
 
         # Create network for workflow
 
-        net_name = f"network_{workflow['name']}"
-        tools.start_network(name=net_name)
+        net_name = f"network_scanflow"
+        # net_name = f"network_{workflow['name']}"
 
         containers = []
-        for wflow in workflow['executors']:
+        for executor in workflow['executors']:
 
-            logging.info(f"[+] Starting env: [{workflow['name']}:{wflow['name']}].")
-            env_tag_name = f"{wflow['name']}"
+            logging.info(f"[+] Starting env: [{workflow['name']}:{executor['name']}].")
 
-            if 'env' in wflow.keys():  # the provided image name exists in repository
-                env_image_name = f"{wflow['env']}"
+            if 'env' in executor.keys():  # the provided image name exists in repository
+                env_image_name = f"{executor['env']}"
+                env_tag_name = f"{workflow['name']}-{executor['name']}"
             else:
-                env_image_name = f"{wflow['name']}"
+                env_image_name = f"{workflow['name']}-{executor['name']}"
+                env_tag_name = env_image_name
+
 
             if 'tracker' in workflow.keys():
                 host_path = self.app_dir
@@ -330,7 +369,7 @@ class Deploy:
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
 
                 if 'volumes' in kwargs:
                     volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
@@ -345,11 +384,6 @@ class Deploy:
                 else:
                     kwargs['environment'] = env_var
 
-                # print(kwargs)
-                # env_container = tools.start_image(image=env_image_name,
-                #                                   name=env_tag_name,
-                #                                   network=net_name,
-                #                                   volume=volumes, environment=env_var)
                 env_container = tools.start_image(image=env_image_name,
                                                   name=env_tag_name,
                                                   network=net_name,
@@ -384,10 +418,10 @@ class Deploy:
             container_path = '/mlflow'
             volumes = {workflow_tracker_dir: {'bind': container_path, 'mode': 'rw'}}
 
-            tracker_image_name = f"tracker-{workflow['name']}"
-            tracker_tag_name = f"tracker-{workflow['name']}"
+            tracker_image_name = f"tracker-mlflow"
+            tracker_tag_name = f"tracker-mlflow"
             logging.info(f"[+] Starting image: [{tracker_image_name}.")
-            # logging.info(f"[+] Starting env: [{tracker_image_name}:{wflow['name']}].")
+            # logging.info(f"[+] Starting env: [{tracker_image_name}:{executor['name']}].")
             # try:
             port = workflow['tracker']['port']
             ports = {f"{port}/tcp": port}
@@ -419,8 +453,8 @@ class Deploy:
                 volumes = {workflow_tracker_dir_agent: {'bind': container_path, 'mode': 'rw'}}
                 kwargs['volumes'].update(volumes)
 
-                tracker_image_agent_name = f"tracker-agent-{workflow['name']}"
-                tracker_tag_agent_name = f"tracker-agent-{workflow['name']}"
+                tracker_image_agent_name = f"{workflow['name']}-tracker-agent"
+                tracker_tag_agent_name = f"{workflow['name']}-tracker-agent"
                 port_agent = port + 1
                 ports_agent = {f"{port_agent}/tcp": port_agent}
                 # ports_agent = {f"{port_agent}/tcp": port_agent, f"22/tcp": 52022}
@@ -441,7 +475,7 @@ class Deploy:
                 kwargs = dict()
                 workflow_checker_dir = self.paths['checker_dir']
                 host_path = workflow_checker_dir
-                # host_path = os.path.join(self.paths['checker_dir'], f"checker-{workflow['name']}" )
+                # host_path = os.path.join(self.paths['checker_dir'], f"{workflow['name']}-checker-detector" )
                 os.makedirs(host_path, exist_ok=True)
                 container_path = '/checker'
 
@@ -449,40 +483,46 @@ class Deploy:
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
 
-                if 'volumes' in kwargs:
-                    volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'].update(volumes)
-                else:
-                    volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
-                               workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'] = volumes
+                volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
 
-                if 'environment' in kwargs:
-                    kwargs['environment'].update(env_var)
-                else:
-                    kwargs['environment'] = env_var
+                kwargs['volumes'] = volumes
+                kwargs['environment'] = env_var
 
-                checker_image_name = f"checker-{workflow['name']}"
-                checker_tag_name = f"checker-{workflow['name']}"
-                checker_container = tools.start_image(image=checker_image_name,
-                                                  name=checker_tag_name,
-                                                  network=net_name,
-                                                  **kwargs)
+                # if 'volumes' in kwargs:
+                #     volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'].update(volumes)
+                # else:
+                #     volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                #                workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'] = volumes
+                #
+                # if 'environment' in kwargs:
+                #     kwargs['environment'].update(env_var)
+                # else:
+                #     kwargs['environment'] = env_var
 
-                checker_container = {'name': checker_image_name,
-                                     'ctn': checker_container}
-
-                list_containers.append(checker_container)
+                # checker_image_name = f"{workflow['name']}-checker-detector"
+                # checker_tag_name = f"{workflow['name']}-checker-detector"
+                # checker_container = tools.start_image(image=checker_image_name,
+                #                                   name=checker_tag_name,
+                #                                   network=net_name,
+                #                                   **kwargs)
+                #
+                # checker_container = {'name': checker_image_name,
+                #                      'ctn': checker_container}
+                #
+                # list_containers.append(checker_container)
 
                 if workflow['checker']['mode'] == 'online':
                     container_path = '/checker/agent'
                     workflow_checker_dir_agent = os.path.join(workflow_checker_dir, "agent" )
                     volumes = {workflow_checker_dir_agent: {'bind': container_path, 'mode': 'rw'}}
                     kwargs['volumes'].update(volumes)
-                    checker_image_agent_name = f"checker-agent-{workflow['name']}"
-                    checker_tag_agent_name = f"checker-agent-{workflow['name']}"
+                    checker_image_agent_name = f"{workflow['name']}-checker-agent"
+                    checker_tag_agent_name = f"{workflow['name']}-checker-agent"
                     port_agent = workflow['checker']['port'] + 1
                     ports_agent = {f"{port_agent}/tcp": port_agent}
                     kwargs['ports'] = ports_agent
@@ -508,38 +548,36 @@ class Deploy:
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
 
-                if 'volumes' in kwargs:
-                    volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'].update(volumes)
-                else:
-                    volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
-                               workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'] = volumes
+                volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
 
-                if 'environment' in kwargs:
-                    kwargs['environment'].update(env_var)
-                else:
-                    kwargs['environment'] = env_var
+                kwargs['volumes'] = volumes
+                kwargs['environment'] = env_var
 
-                # improver_image_name = f"improver-{workflow['name']}"
-                # improver_tag_name = f"improver-{workflow['name']}"
-                # improver_container = tools.start_image(image=improver_image_name,
-                #                                       name=improver_tag_name,
-                #                                       network=net_name,
-                #                                       **kwargs)
+                # if 'volumes' in kwargs:
+                #     volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'].update(volumes)
+                # else:
+                #     volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                #                workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     # volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                #     #            workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'] = volumes
                 #
-                # improver_container = {'name': improver_image_name,
-                #                      'ctn': improver_container}
+                # if 'environment' in kwargs:
+                #     kwargs['environment'].update(env_var)
+                # else:
+                #     kwargs['environment'] = env_var
 
                 if workflow['improver']['mode'] == 'online':
                     container_path = '/improver/agent'
                     workflow_improver_dir_agent = os.path.join(workflow_improver_dir, "agent" )
                     volumes = {workflow_improver_dir_agent: {'bind': container_path, 'mode': 'rw'}}
                     kwargs['volumes'].update(volumes)
-                    improver_image_agent_name = f"improver-agent-{workflow['name']}"
-                    improver_tag_agent_name = f"improver-agent-{workflow['name']}"
+                    improver_image_agent_name = f"{workflow['name']}-improver-agent"
+                    improver_tag_agent_name = f"{workflow['name']}-improver-agent"
                     port_agent = workflow['improver']['port']
                     ports_agent = {f"{port_agent}/tcp": port_agent}
                     kwargs['ports'] = ports_agent
@@ -565,38 +603,34 @@ class Deploy:
                 workflow_tracker_dir_ctn = '/mlflow'
 
 
-                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-{workflow['name']}:{workflow['tracker']['port']}"}
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
 
-                if 'volumes' in kwargs:
-                    volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'].update(volumes)
-                else:
-                    volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
-                               workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
-                    kwargs['volumes'] = volumes
+                volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
 
-                if 'environment' in kwargs:
-                    kwargs['environment'].update(env_var)
-                else:
-                    kwargs['environment'] = env_var
+                kwargs['volumes'] = volumes
+                kwargs['environment'] = env_var
 
-                # planner_image_name = f"planner-{workflow['name']}"
-                # planner_tag_name = f"planner-{workflow['name']}"
-                # planner_container = tools.start_image(image=planner_image_name,
-                #                                        name=planner_tag_name,
-                #                                        network=net_name,
-                #                                        **kwargs)
-
-                # planner_container = {'name': planner_image_name,
-                #                       'ctn': planner_container}
+                # if 'volumes' in kwargs:
+                #     volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'].update(volumes)
+                # else:
+                #     volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                #                workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'] = volumes
+                #
+                # if 'environment' in kwargs:
+                #     kwargs['environment'].update(env_var)
+                # else:
+                #     kwargs['environment'] = env_var
 
                 if workflow['planner']['mode'] == 'online':
                     container_path = '/planner/agent'
                     workflow_planner_dir_agent = os.path.join(workflow_planner_dir, "agent" )
                     volumes = {workflow_planner_dir_agent: {'bind': container_path, 'mode': 'rw'}}
                     kwargs['volumes'].update(volumes)
-                    planner_image_agent_name = f"planner-agent-{workflow['name']}"
-                    planner_tag_agent_name = f"planner-agent-{workflow['name']}"
+                    planner_image_agent_name = f"{workflow['name']}-planner-agent"
+                    planner_tag_agent_name = f"{workflow['name']}-planner-agent"
                     port_agent = workflow['planner']['port']
                     ports_agent = {f"{port_agent}/tcp": port_agent}
                     kwargs['ports'] = ports_agent
@@ -610,35 +644,92 @@ class Deploy:
                                                 'ctn': planner_agent_container, 'port': port_agent}
                     list_containers.append(planner_agent_container)
 
+            if 'predictor' in workflow.keys():
+                kwargs = dict()
+                workflow_predictor_dir = self.paths['predictor_dir']
+                host_path = workflow_predictor_dir
+                # host_path = os.path.join(self.paths['predictor_dir'], f"predictor-{workflow['name']}" )
+                os.makedirs(host_path, exist_ok=True)
+                container_path = '/predictor'
+
+                workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
+                workflow_tracker_dir_ctn = '/mlflow'
+
+
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
+
+                volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+
+                kwargs['volumes'] = volumes
+                kwargs['environment'] = env_var
+
+                # if 'volumes' in kwargs:
+                #     volumes = {workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'].update(volumes)
+                # else:
+                #     volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                #                workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+                #     kwargs['volumes'] = volumes
+                #
+                # if 'environment' in kwargs:
+                #     kwargs['environment'].update(env_var)
+                # else:
+                #     kwargs['environment'] = env_var
+
+                # if workflow['predictor']['mode'] == 'online':
+                container_path = '/predictor'
+                # container_path = '/predictor/agent'
+                # workflow_predictor_dir_agent = os.path.join(workflow_predictor_dir, "agent" )
+                volumes = {workflow_predictor_dir: {'bind': container_path, 'mode': 'rw'}}
+                kwargs['volumes'].update(volumes)
+                predictor_image_name = f"{workflow['name']}-predictor"
+                predictor_tag_name = f"{workflow['name']}-predictor"
+                port = workflow['predictor']['port']
+                ports = {f"{port}/tcp": port}
+                kwargs['ports'] = ports
+                kwargs['environment'].update({'PREDICTOR_PORT': port})
+                predictor_container = tools.start_image(image=predictor_image_name,
+                                                            name=predictor_tag_name,
+                                                            network=net_name,
+                                                            **kwargs)
+
+                predictor_container = {'name': predictor_image_name,
+                                           'ctn': predictor_container, 'port': port}
+                list_containers.append(predictor_container)
             return containers, list_containers
 
         return containers, [None]
 
     def stop_workflows(self, tracker=True, checker=True,
-                       improver=True, planner=True, network=True):
+                       improver=True, planner=True, predictor=True, network=True):
         """
         Stop containers in each workflow but not the trackers.
 
         """
+        verbose = True
+        tools.check_verbosity(verbose)
+
         for wflow in self.workflows_user:
-            self.__stop_workflow(wflow, tracker, checker, improver, planner, network)
+            self.__stop_workflow(wflow, tracker, checker, improver, planner, predictor, network)
 
-    def __stop_workflow(self, workflow, tracker, checker, improver, planner, network):
+    def __stop_workflow(self, workflow, tracker, checker, improver, planner, predictor, network):
 
-        for wflow in workflow['executors']:
+        for executor in workflow['executors']:
+            executor_name = f"{workflow['name']}-{executor['name']}"
             try:
-                container_from_env = client.containers.get(wflow['name'])
+                container_from_env = client.containers.get(executor_name)
                 container_from_env.stop()
                 container_from_env.remove()
-                logging.info(f"[+] Environment: [{wflow['name']}] was stopped successfully.")
+                logging.info(f"[+] Environment: [{executor_name}] was stopped successfully.")
 
             except docker.api.client.DockerException as e:
                 # logging.error(f"{e}")
-                logging.info(f"[+] Environment: [{wflow['name']}] is not running in local.")
+                logging.info(f"[+] Environment: [{executor_name}] is not running in local.")
 
         if tracker:
             if 'tracker' in workflow.keys():
-                tracker_image_name = f"tracker-{workflow['name']}"
+                tracker_image_name = f"tracker-mlflow"
                 try:
                     container_from_env = client.containers.get(tracker_image_name)
                     container_from_env.stop()
@@ -650,7 +741,7 @@ class Deploy:
                     logging.info(f"[+] Tracker: [{tracker_image_name}] is not running in local.")
 
                 if workflow['tracker']['mode'] == 'online':
-                    tracker_agent_image_name = f"tracker-agent-{workflow['name']}"
+                    tracker_agent_image_name = f"{workflow['name']}-tracker-agent"
                     try:
                         container_from_env = client.containers.get(tracker_agent_image_name)
                         container_from_env.stop()
@@ -662,19 +753,19 @@ class Deploy:
                         logging.info(f"[+] Tracker agent: [{tracker_agent_image_name}] is not running in local.")
         if checker:
             if 'checker' in workflow.keys():
-                checker_image_name = f"checker-{workflow['name']}"
-                try:
-                    container_from_env = client.containers.get(checker_image_name)
-                    container_from_env.stop()
-                    container_from_env.remove()
-                    logging.info(f"[+] Checker: [{checker_image_name}] was stopped successfully.")
-
-                except docker.api.client.DockerException as e:
-                    # logging.error(f"{e}")
-                    logging.info(f"[+] Checker: [{checker_image_name}] is not running in local.")
+                # checker_image_name = f"{workflow['name']}-checker-detector"
+                # try:
+                #     container_from_env = client.containers.get(checker_image_name)
+                #     container_from_env.stop()
+                #     container_from_env.remove()
+                #     logging.info(f"[+] Checker: [{checker_image_name}] was stopped successfully.")
+                #
+                # except docker.api.client.DockerException as e:
+                #     # logging.error(f"{e}")
+                #     logging.info(f"[+] Checker: [{checker_image_name}] is not running in local.")
 
                 if workflow['tracker']['mode'] == 'online':
-                    checker_agent_image_name = f"checker-agent-{workflow['name']}"
+                    checker_agent_image_name = f"{workflow['name']}-checker-agent"
                     try:
                         container_from_env = client.containers.get(checker_agent_image_name)
                         container_from_env.stop()
@@ -688,7 +779,7 @@ class Deploy:
             if 'improver' in workflow.keys():
 
                 if workflow['tracker']['mode'] == 'online':
-                    improver_agent_image_name = f"improver-agent-{workflow['name']}"
+                    improver_agent_image_name = f"{workflow['name']}-improver-agent"
                     try:
                         container_from_env = client.containers.get(improver_agent_image_name)
                         container_from_env.stop()
@@ -702,7 +793,7 @@ class Deploy:
             if 'planner' in workflow.keys():
 
                 if workflow['tracker']['mode'] == 'online':
-                    planner_agent_image_name = f"planner-agent-{workflow['name']}"
+                    planner_agent_image_name = f"{workflow['name']}-planner-agent"
                     try:
                         container_from_env = client.containers.get(planner_agent_image_name)
                         container_from_env.stop()
@@ -712,6 +803,20 @@ class Deploy:
                     except docker.api.client.DockerException as e:
                         # logging.error(f"{e}")
                         logging.info(f"[+] Planner agent: [{planner_agent_image_name}] is not running in local.")
+        if predictor:
+            if 'predictor' in workflow.keys():
+
+                # if workflow['tracker']['mode'] == 'online':
+                predictor_image_name = f"{workflow['name']}-predictor"
+                try:
+                    container_from_env = client.containers.get(predictor_image_name)
+                    container_from_env.stop()
+                    container_from_env.remove()
+                    logging.info(f"[+] Predictor agent: [{predictor_image_name}] was stopped successfully.")
+
+                except docker.api.client.DockerException as e:
+                    # logging.error(f"{e}")
+                    logging.info(f"[+] Predictor agent: [{predictor_image_name}] is not running in local.")
 
 
         client.containers.prune()
@@ -751,7 +856,7 @@ class Deploy:
 
             logging.info(f"[+] Workflow: [{wf_user['name']}] was run successfully.")
             workflow = {'name': wf_user['name'], 'envs': environments}
-            self.workflows.append(workflow)
+            self.logs_run_workflow.append(workflow)
 
         end = time.time()
         print(f"Elapsed time: {end-start}")
@@ -777,10 +882,10 @@ class Deploy:
             for step in workflow['executors']:
                 logging.info(f"[+] Running env: [{workflow['name']}:{step['name']}].")
 
-                env_container, result = tools.run_step(step)
+                env_container, result = tools.run_step(step, workflow['name'])
                 containers.append({'name': step['name'],
                                    'ctn': env_container,
-                                   'result': result.output.decode('utf-8')[:10]})
+                                   'result': result.output.decode('utf-8')})
 
         return containers
 

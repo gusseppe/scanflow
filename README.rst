@@ -127,6 +127,7 @@ Installation
 ------------
 
 - Install docker.
+- sudo usermod -aG docker <your-user>
 
 **Using conda**
 

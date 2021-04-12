@@ -59,18 +59,18 @@ def generate_compose(paths, workflows, compose_type='repository'):
     return compose_path
 
 
-def agent_template(agent_name, agents_dict):
-    if agent_name == 'tracker':
-        return agent_template_tracker(agents_dict)
-    elif agent_name == 'checker':
-        return agent_template_checker(agents_dict)
-    elif agent_name == 'improver':
-        return agent_template_improver(agents_dict)
-    elif agent_name == 'planner':
-        return agent_template_planner(agents_dict)
+def agent_template(kwargs):
+    if kwargs['agent_name'] == 'tracker':
+        return agent_template_tracker(**kwargs)
+    elif kwargs['agent_name'] == 'checker':
+        return agent_template_checker(**kwargs)
+    elif kwargs['agent_name'] == 'improver':
+        return agent_template_improver(**kwargs)
+    elif kwargs['agent_name'] == 'planner':
+        return agent_template_planner(**kwargs)
 
 
-def generate_agents(paths):
+def generate_agents(paths, workflow_name, app_dir, gateway):
 
     agents_dict = {
         'tracker': 8003,
@@ -79,8 +79,14 @@ def generate_agents(paths):
         'planner': 8007,
     }
 
+    kwargs = dict()
     for agent_name, _ in agents_dict.items():
-        agent_file_code = agent_template(agent_name, agents_dict)
+        kwargs['agent_name'] = agent_name
+        kwargs['agents_dict'] = agents_dict
+        kwargs['workflow_name'] = workflow_name
+        kwargs['app_dir'] = app_dir
+        kwargs['gateway'] = gateway
+        agent_file_code = agent_template(kwargs)
         agent_dir = os.path.join(paths[f'{agent_name}_dir'], 'agent')
 
         agent_file_path = os.path.join(agent_dir, f'{agent_name}_agent.py')
@@ -253,7 +259,7 @@ def compose_template_swarm(paths, workflows):
     return compose_dic, main_file
 
 
-def generate_dockerfile(folder, dock_type='executor', executor=None, port=None):
+def generate_dockerfile(folder, dock_type='executor', executor=None, port=None, model=None, version=None):
     # if len(dockerfile) == 0:
     dockerfile = None
     filename = ''
@@ -278,6 +284,9 @@ def generate_dockerfile(folder, dock_type='executor', executor=None, port=None):
     elif dock_type == 'planner_agent':
         dockerfile = dockerfile_template_planner_agent(port)
         filename = f"Dockerfile_planner_agent_{executor['name']}"
+    elif dock_type == 'predictor':
+        dockerfile = dockerfile_template_predictor(port, model, version)
+        filename = f"Dockerfile_predictor_{model}"
 
     dockerfile_path = os.path.join(folder, filename)
     with open(dockerfile_path, 'w') as f:
@@ -499,6 +508,53 @@ def dockerfile_template_planner_agent(port=8005):
     ''')
     return template
 
+def dockerfile_template_predictor(port=8010, model="mnist_cnn", version=1):
+    base_image = 'continuumio/miniconda3'
+    user = 'predictor'
+    template = dedent(f'''
+                FROM {base_image}
+                LABEL maintainer='scanflow'
+
+                RUN pip install mlflow==1.14.1
+                RUN chmod -R 777 /opt/conda/
+
+                ENV PREDICTOR_PORT  {port}
+                ENV PREDICTOR_HOME  /{user}
+                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p $PREDICTOR_HOME
+                RUN chown -R {user} /{user}
+                USER {user}
+                WORKDIR $PREDICTOR_HOME
+                CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT
+
+    ''')
+    return template
+
+# def dockerfile_template_predictor(port=8010, model="mnist_cnn", version=1):
+#     base_image = 'continuumio/miniconda3'
+#     user = 'predictor'
+#     template = dedent(f'''
+#                 FROM {base_image}
+#                 LABEL maintainer='scanflow'
+#
+#                 RUN apt update && apt install sudo
+#
+#                 RUN pip install mlflow==1.14.1
+#
+#                 ENV PREDICTOR_PORT  {port}
+#                 ENV PREDICTOR_HOME  /{user}
+#
+#                 RUN useradd -m -d /{user} {user}
+#                 RUN adduser {user} sudo
+#                 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
+#                 RUN mkdir -p $PREDICTOR_HOME
+#                 USER {user}
+#                 WORKDIR $PREDICTOR_HOME/workflow
+#                 CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT
+#
+#     ''')
+#     return template
+
 def generate_main_file(app_dir, id_date):
 
     main_file = dedent(f"""
@@ -653,8 +709,8 @@ def build_image(name, dockerfile_dir, dockerfile_path,
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
         # TODO: consider adding the image[1] logs
-        print(dir(image[1]))
-        print(list(image[1]))
+        # print(dir(image[1]))
+        # print(list(image[1]))
         # logging.error(f"{image[1]}")
         logging.error(f"[-] Image building failed.", exc_info=True)
 
@@ -696,7 +752,7 @@ def start_image(image, name, network=None, **kwargs):
         logging.error(f"[-] Starting environment: [{name}] failed.", exc_info=True)
 
 
-def start_network(name):
+def create_network(name):
 
     net_from_env = None
 
@@ -830,6 +886,7 @@ def get_scanflow_paths(app_dir):
     planner_dir = os.path.join(stuff_dir, 'planner')
     planner_agent_dir = os.path.join(planner_dir, 'agent')
 
+    predictor_dir = os.path.join(stuff_dir, 'predictor')
     # checker_pred_dir = os.path.join(checker_dir, 'predictions')
     # checker_model_dir = os.path.join(checker_dir, 'model')
     # checker_scaler_dir = os.path.join(checker_dir, 'scaler')
@@ -846,7 +903,8 @@ def get_scanflow_paths(app_dir):
                 'improver_dir': improver_dir,
                 'improver_agent_dir': improver_agent_dir,
                 'planner_dir': planner_dir,
-                'planner_agent_dir': planner_agent_dir
+                'planner_agent_dir': planner_agent_dir,
+                'predictor_dir': predictor_dir
             }
                 # 'checker_pred_dir': checker_pred_dir,
                 # 'checker_model_dir': checker_model_dir,
@@ -893,7 +951,7 @@ def predict(input_path, port=5001):
         logging.error(f"Request to API failed.")
 
 
-def run_step(step):
+def run_step(step, workflow_name):
     """
     Run a workflow that consists of several python files.
 
@@ -905,7 +963,7 @@ def run_step(step):
     # logging.info(f'Running workflow: type={self.app_type} .')
     # logging.info(f'[+] Running workflow on [{env_container_name}].')
     try:
-        env_name = step['name']
+        env_name = f"{workflow_name}-{step['name']}"
         env_container = client.containers.get(env_name)
         if 'parameters' in step.keys():
             cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
@@ -945,6 +1003,13 @@ def save_workflows(paths, workflows):
     with open(workflows_metadata_path, 'w') as fout:
         json.dump(workflows, fout)
 
+
+def save_workflow(workflow, name, path):
+    workflow_metadata_name = f'{name}.json'
+    workflow_metadata_path = os.path.join(path, workflow_metadata_name)
+
+    with open(workflow_metadata_path, 'w') as fout:
+        json.dump(workflow, fout)
 
 def read_workflows(paths):
     meta_dir = paths['meta_dir']
@@ -1033,7 +1098,7 @@ def draw_graph(graph):
     plt.show()
 
 
-def agent_template_tracker(agents_dict):
+def agent_template_tracker(agent_name, agents_dict, workflow_name, app_dir, gateway):
 
     main_file = dedent(f"""
     import uvicorn
@@ -1053,9 +1118,11 @@ def agent_template_tracker(agents_dict):
 
     class Config():
         agent_name = 'Tracker'
+
+        app_dir = '{app_dir}'
         tracker_belief_filename = 'summary.json'
-        checker_agent_uri = "http://checker-agent-mnist:{agents_dict['checker']}/checker/anomaly"
-        improver_agent_uri = "http://improver-agent-mnist:{agents_dict['improver']}/improver/conclusions"
+        checker_agent_uri = "http://{workflow_name}-checker-agent:{agents_dict['checker']}/checker/anomaly"
+        improver_agent_uri = "http://{workflow_name}-improver-agent:{agents_dict['improver']}/improver/conclusions"
 
     # consider put this into startup fastapi function
 
@@ -1179,7 +1246,7 @@ def agent_template_tracker(agents_dict):
     return main_file
 
 
-def agent_template_checker(agents_dict):
+def agent_template_checker(agent_name, agents_dict, workflow_name, app_dir, gateway):
 
     main_file = dedent("""
     import uvicorn
@@ -1370,9 +1437,9 @@ def agent_template_checker(agents_dict):
     return main_file
 
 
-def agent_template_improver(agents_dict):
+def agent_template_improver(agent_name, agents_dict, workflow_name, app_dir, gateway):
 
-    main_file = dedent("""
+    main_file = dedent(f"""
     import uvicorn
     import numpy as np
     import os
@@ -1394,18 +1461,31 @@ def agent_template_improver(agents_dict):
     logging.getLogger().setLevel(logging.INFO)
 
 
-    agent_name = 'Improver'
+    tracker_uri = "http://tracker-agent-mnist:8003/tracker/current/model"
+    checker_uri = "http://checker-agent-mnist:8005/feedback/anomaly/last"
+    planner_uri = "http://planner-agent-mnist:8007/planner/plans"
+
+    # agent_name = 'Improver'
     # consider put this into startup fastapi function
     client = MlflowClient()
 
-    experiment = client.get_experiment_by_name(agent_name)
+    class Config():
+        agent_name = 'Improver'
+
+        app_dir = '{app_dir}'
+        improver_filename = 'conclusions.json'
+        tracker_uri = "http://{workflow_name}-tracker-agent:{agents_dict['tracker']}/tracker/current/model"
+        checker_uri = "http://{workflow_name}-checker-agent:{agents_dict['checker']}/feedback/anomaly/last"
+        planner_uri = "http://{workflow_name}-planner-agent:{agents_dict['planner']}/planner/plans"
+
+    experiment = client.get_experiment_by_name(Config.agent_name)
 
     if experiment:
         experiment_id = experiment.experiment_id
-        logging.info(f"[Improver]  '{agent_name}' experiment loaded.")
+        logging.info(f"[Improver]  '{{Config.agent_name}}' experiment loaded.")
     else:
-        experiment_id = client.create_experiment(agent_name)
-        logging.info(f"[Improver]  '{agent_name}' experiment does not exist. Creating a new one.")
+        experiment_id = client.create_experiment(Config.agent_name)
+        logging.info(f"[Improver]  '{{Config.agent_name}}' experiment does not exist. Creating a new one.")
 
 
     app = FastAPI(title='Improver Agent API',
@@ -1436,25 +1516,22 @@ def agent_template_improver(agents_dict):
               summary="Call improver to get conclusions")
     async def execute_improver(feedback: dict):
 
-        tracker_uri = "http://tracker-agent-mnist:8003/tracker/current/model"
-        checker_uri = "http://checker-agent-mnist:8005/feedback/anomaly/last"
-        planner_uri = "http://planner-agent-mnist:8007/planner/plans"
         n_anomalies = feedback['n_anomalies']
         p_anomalies = feedback['percentage_anomalies']
 
         if p_anomalies <= 0.05:
-            response = {'conclusions': f'Normal behavior!, {p_anomalies}% anomalies'}
+            response = {{'conclusions': f'Normal behavior!, {{p_anomalies}}% anomalies'}}
         elif 0.05 < p_anomalies < 0.1:
-            response = {'conclusions': f'Alert!, {p_anomalies}% anomalies'}
+            response = {{'conclusions': f'Alert!, {{p_anomalies}}% anomalies'}}
         else:
             # Get the current model from tracker
-            message = Message("", "INFORM", tracker_uri)
+            message = Message("", "INFORM", Config.tracker_uri)
             async with app.aiohttp_session.get(message.receiver) as response:
                 result_tracker = await response.json(content_type=None)
 
 
             # Get the input data from checker
-            message = Message("", "INFORM", checker_uri)
+            message = Message("", "INFORM", Config.checker_uri)
             async with app.aiohttp_session.get(message.receiver) as response:
                 result_checker = await response.json(content_type=None)
             feedback = result_checker['feedback']
@@ -1465,7 +1542,7 @@ def agent_template_improver(agents_dict):
             input_local_path = os.path.join('/tmp', feedback['input_path'])
 
             # The retraining begins here
-            new_model_name = f"{result_tracker['model']['name']}_new"
+            new_model_name = f"{{result_tracker['model']['name']}}_new"
             print(new_model_name)
             class AddN(mlflow.pyfunc.PythonModel):
 
@@ -1478,7 +1555,7 @@ def agent_template_improver(agents_dict):
             new_model = AddN(n=5)
 
             with mlflow.start_run(experiment_id=experiment_id,
-                                  run_name=agent_name) as mlrun:
+                                  run_name=Config.agent_name) as mlrun:
                 mlflow.pyfunc.log_model(
                     python_model=new_model,
                     artifact_path=new_model_name,
@@ -1486,32 +1563,38 @@ def agent_template_improver(agents_dict):
                 )
             # The retraining ends here
 
+            host_address = 'http://{gateway}:8050/run/workflow'
+            request = {{'app_dir': Config.app_dir,
+                       'name': 'retraining-mnist', # workflow name
+                       'parameters': None}}
+            async with app.aiohttp_session.post(host_address, json=request) as response:
+                result_host = await response.json(content_type=None)
+
             # Communicate with the Planner
-            content = {'conclusions': {
+            content = {{'conclusions': {{
                             'order': 'Transition new model to Production.',
                             'current_model_name': result_tracker['model']['name'],
                             'current_model_version': result_tracker['model']['version'],
                             'new_model_name': new_model_name,
-                        }
-                      }
-            message = Message(content, "INFORM", planner_uri)
+                        }}
+                      }}
+            message = Message(content, "INFORM", Config.planner_uri)
             async with app.aiohttp_session.post(message.receiver, json=content) as response:
                 result_planner = await response.json(content_type=None)
 
 
-            response = {'conclusions': {
-                            "action": f'Retraining the model using the new data: {input_local_path}',
+            response = {{'conclusions': {{
+                            "action": f'Retraining the model using the new data: {{input_local_path}}',
                             "planner": result_planner,
-                        }
-                      }
+                        }}
+                      }}
 
-        improver_filename = 'conclusions.json'
-        with open(improver_filename, 'w') as fout:
+        with open(Config.improver_filename, 'w') as fout:
             json.dump(response, fout)
 
         with mlflow.start_run(experiment_id=experiment_id,
-                              run_name=agent_name) as mlrun:
-            mlflow.log_artifact(improver_filename, 'Conclusions')
+                              run_name=Config.agent_name) as mlrun:
+            mlflow.log_artifact(Config.improver_filename, 'Conclusions')
 
         return  response
 
@@ -1530,16 +1613,16 @@ def agent_template_improver(agents_dict):
                                           conclusions_artifact_path,
                                           '/tmp/')
             except:
-                response = {"feedback": 'No conclusions found yet'}
+                response = {{"feedback": 'No conclusions found yet'}}
                 return response
 
             conclusions_local_path = os.path.join('/tmp', conclusions_artifact_path)
             with open(conclusions_local_path) as fread:
                 conclusions = json.load(fread)
 
-            response = {"conclusions": conclusions}
+            response = {{"conclusions": conclusions}}
         else:
-            response = {"conclusions": 'No experiments yet'}
+            response = {{"conclusions": 'No experiments yet'}}
 
         return response
 
@@ -1548,7 +1631,7 @@ def agent_template_improver(agents_dict):
     return main_file
 
 
-def agent_template_planner(agents_dict):
+def agent_template_planner(agent_name, agents_dict, workflow_name, app_dir, gateway):
 
     main_file = dedent("""
     import uvicorn
@@ -1648,13 +1731,13 @@ def agent_template_planner(agents_dict):
                   }
 
 
-        improver_filename = 'plan.json'
-        with open(improver_filename, 'w') as fout:
+        planner_filename = 'plan.json'
+        with open(planner_filename, 'w') as fout:
             json.dump(response, fout)
 
         with mlflow.start_run(experiment_id=experiment_id,
                               run_name=agent_name) as mlrun:
-            mlflow.log_artifact(improver_filename, 'Plan')
+            mlflow.log_artifact(planner_filename, 'Plan')
 
         return  response
 

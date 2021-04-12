@@ -37,7 +37,8 @@ class Tracker:
         self.paths = tools.get_scanflow_paths(app_dir)
         self.verbose = verbose
         tools.check_verbosity(verbose)
-        self.workflows = tools.read_workflows(self.paths)
+        # self.workflows = tools.read_workflows(self.paths)
+        self.workflows = None
         # self.stuff_dir = os.path.join(app_dir, 'stuff')
         # self.meta_dir = os.path.join(self.stuff_dir, 'meta')
         # self.tracker_dir = os.path.join(self.stuff_dir, 'tracker')

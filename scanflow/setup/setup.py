@@ -16,6 +16,7 @@ from scanflow.special.tracker import Tracker
 from scanflow.special.checker import Checker
 from scanflow.special.improver import Improver
 from scanflow.special.planner import Planner
+from scanflow.special.predictor import Predictor
 
 from textwrap import dedent
 from shutil import copy2
@@ -282,6 +283,7 @@ class Workflow(object):
                  checker: Checker = None,
                  improver: Improver = None,
                  planner: Planner = None,
+                 predictor: Predictor = None,
                  parallel: bool = False):
 
         self.name = name
@@ -290,6 +292,7 @@ class Workflow(object):
         self._checker = checker
         self._improver = improver
         self._planner = planner
+        self._planner = predictor
 
         self.parallel = parallel
         self._to_dict = locals()
@@ -342,6 +345,15 @@ class Workflow(object):
             raise TypeError('The added planner must be '
                             'an instance of class Planner. '
                             'Found: ' + str(self._planner[0]))
+
+    @property
+    def predictor(self):
+        if self._predictor and isinstance(self._predictor, Predictor):
+            return self._predictor
+        else:
+            raise TypeError('The added predictor must be '
+                            'an instance of class Predictor. '
+                            'Found: ' + str(self._predictor[0]))
     @property
     def to_dict(self):
         tmp_dict = self._to_dict
@@ -359,6 +371,8 @@ class Workflow(object):
             if k == 'improver':
                 tmp_dict[k] = v.to_dict
             if k == 'planner':
+                tmp_dict[k] = v.to_dict
+            if k == 'predictor':
                 tmp_dict[k] = v.to_dict
 
         tmp_dict['executors'] = executors_list
