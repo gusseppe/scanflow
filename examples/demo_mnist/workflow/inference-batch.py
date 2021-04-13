@@ -9,12 +9,12 @@ import torch
 
 from pathlib import Path
 
-@click.command(help="Gather an input data set")
+@click.command(help="Make predictions")
+@click.option("--model_name", default='mnist_cnn', type=str)
+@click.option("--model_version",  default=1, type=int)
 @click.option("--x_inference_path", help="New data",
               default='./images', type=str)
-@click.option("--model_name", type=str)
-@click.option("--model_version",  default=1, type=int)
-def inference(x_inference_path, model_name, model_version):
+def inference(model_name, model_version, x_inference_path):
     with mlflow.start_run(run_name='inference_batch') as mlrun:
 
         img_rows, img_cols = 28, 28

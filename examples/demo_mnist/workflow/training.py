@@ -25,12 +25,13 @@ from torch.optim.lr_scheduler import StepLR
 
 client = MlflowClient()
 
-@click.command(help="Gather an input data set")
+@click.command(help="Train the CNN model")
+@click.option("--model_name", default='mnist_cnn', type=str)
 @click.option("--x_train_path", default='./images', type=str)
 @click.option("--y_train_path", default='./images', type=str)
 @click.option("--x_test_path", default='./images', type=str)
 @click.option("--y_test_path", default='./images', type=str)
-def training(x_train_path, y_train_path, x_test_path, y_test_path):
+def training(model_name, x_train_path, y_train_path, x_test_path, y_test_path):
     with mlflow.start_run(run_name='training') as mlrun:
 
         img_rows, img_cols = 28, 28
@@ -43,7 +44,6 @@ def training(x_train_path, y_train_path, x_test_path, y_test_path):
         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols)
         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols)
             
-        model_name = 'mnist_cnn'
         model_mnist = fit_model(x_train, y_train, model_name=f'{model_name}.pt')
         mnist_score = evaluate(model_mnist, x_test, y_test)
         predictions = predict_model(model_mnist, x_test)
@@ -53,18 +53,19 @@ def training(x_train_path, y_train_path, x_test_path, y_test_path):
                                  signature=signature, 
                                  registered_model_name=model_name,
                                  input_example=x_test[:2])
-        client.transition_model_version_stage(
-            name="mnist_cnn",
-            version=1,
-            stage="Staging"
-        )  
+        
+#         client.transition_model_version_stage(
+#             name="mnist_cnn",
+#             version=1,
+#             stage="Staging"
+#         )  
         model_path = './model'
         if os.path.isdir(model_path):
             shutil.rmtree(model_path, ignore_errors=True)
         else:
             mlflow.pytorch.save_model(model_mnist, model_path)
             
-        mlflow.log_param(key='score', value=round(mnist_score, 2))
+        mlflow.log_param(key='accuracy', value=round(mnist_score, 2))
 
         mlflow.log_artifact(x_train_path, 'dataset')
         mlflow.log_artifact(y_train_path, 'dataset')

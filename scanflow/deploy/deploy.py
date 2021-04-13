@@ -859,7 +859,7 @@ class Deploy:
             self.logs_run_workflow.append(workflow)
 
         end = time.time()
-        print(f"Elapsed time: {end-start}")
+        logging.info(f"[+] Elapsed time: {round(end-start, 2)} seconds")
 
     def __run_workflow(self, workflow, parallel=False):
         """

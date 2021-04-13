@@ -17,7 +17,7 @@ from pathlib import Path
 client = MlflowClient()
 
 @click.command(help="Detect anomalies")
-@click.option("--run_id", default='0f5cdf50eea84df0a5954fcd438d5b90', type=str)
+@click.option("--run_id", default='be066cefe8784a248aa3f6e89f70d4f6', type=str)
 @click.option("--x_inference_artifact", default='x_inference.npy', type=str)
 @click.option("--y_inference_artifact", default='y_inference.npy', type=str)
 @click.option("--detector_path", help="",
