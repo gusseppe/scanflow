@@ -33,6 +33,8 @@ async def run_workflow(content: dict):
         logging.error(f"{e}")
         logging.error(f"[-] Workflow metadata [{content['name']}] does not exist.")
 
+    setup['executors'][0]['parameters'] = content['parameters']
+
     deployer = Deploy(setup)
     deployer.run_workflows(verbose=True)
     result = deployer.logs_run_workflow[0]['envs'][0]['result']

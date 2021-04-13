@@ -49,9 +49,12 @@ def detector(run_id, x_inference_artifact, y_inference_artifact, detector_path):
                                                     epochs=10, 
                                                     model_path=detector_path,
                                                     date=date, 
-                                                    wanted_anomalies=50)
+                                                    wanted_anomalies=5)
         
-        x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test, x_inference, y_inference)
+        n_critical_points = 5
+        x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test, 
+                                                                       x_inference, y_inference,
+                                                                       n_critical_points)
         with open('x_inference_chosen.npy', 'wb') as f:
             np.save(f, x_inference_chosen)
         with open('y_inference_chosen.npy', 'wb') as f:

@@ -45,6 +45,17 @@ def inference(x_inference):
     predictions = pd.read_csv(y_inference_path)
     
     return predictions['predictions'].values
+ 
+def trigger_mas():
+    import requests
+
+    url = 'http://localhost:8003/send/checker/anomaly'
+    response = requests.get(
+        url=url,
+        headers={"accept": "application/json"})
+
+    response_json = json.loads(response.text)
+    print(response_json)
     
 def classifier(folder):
     result = dict()

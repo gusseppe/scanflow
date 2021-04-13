@@ -193,9 +193,9 @@ def choice_from_anomalous(anomalous_loss, default=True):
 
     return random_from_kde
 
-def picker(E_test, x_inference, y_inference):
+def picker(E_test, x_inference, y_inference, n_critical_points=5):
     np.random.seed(RANDOM_STATE_SEED)
-    n_critical_points = 50
+#     n_critical_points = 5
     request_list = list()
 #     checker, E_full, E_test, test = get_checker(x_train, x_new_c_, 
 #                                               epochs=epochs_anomaly, 
