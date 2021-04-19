@@ -1,0 +1,12 @@
+
+FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
+
+COPY req_inference_online.txt req_inference_online.txt
+RUN pip install -r req_inference_online.txt
+
+RUN useradd -m -d /executor executor
+RUN chown -R executor /executor
+USER executor
+WORKDIR /executor
+

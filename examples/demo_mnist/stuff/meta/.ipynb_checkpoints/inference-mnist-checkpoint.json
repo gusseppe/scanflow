@@ -1,0 +1,1 @@
+{"name": "inference-mnist", "executors": [{"name": "detector-batch", "file": "detector-batch.py", "parameters": {"x_inference_artifact": "x_inference.npy", "y_inference_artifact": "y_inference.npy"}, "requirements": "req_detector.txt"}], "tracker": {"mode": "offline", "port": 8002}, "parallel": false, "app_dir": "/home/guess/Desktop/scanflow/examples/demo_mnist/"}

@@ -1,0 +1,12 @@
+
+FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
+
+COPY req_inference_batch.txt req_inference_batch.txt
+RUN pip install -r req_inference_batch.txt
+
+RUN useradd -m -d /executor executor
+RUN chown -R executor /executor
+USER executor
+WORKDIR /executor
+

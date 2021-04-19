@@ -1,0 +1,4 @@
+tensorflow==2.4.1
+mlflow==1.14.1
+scipy==1.6.2
+

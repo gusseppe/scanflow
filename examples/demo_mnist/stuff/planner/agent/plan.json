@@ -1,0 +1,1 @@
+{"Plan": {"order": "Transition", "current_model_name": "mnist_cnn", "current_model_version": "1", "new_model_name": "mnist_cnn_new", "new_model_version": "2", "result": "Current model has been archived. New model is labeled as 'Production'"}}

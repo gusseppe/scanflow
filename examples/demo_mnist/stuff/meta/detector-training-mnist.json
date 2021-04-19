@@ -1,0 +1,1 @@
+{"name": "detector-training-mnist", "executors": [{"name": "detector-training", "file": "detector-training.py", "parameters": {"name": "detector_mnist", "x_train_path": "./mnist_sample/train_images.npy"}, "requirements": "req_detector.txt"}], "tracker": {"mode": "offline", "port": 8002}, "parallel": false, "app_dir": "/home/guess/Desktop/scanflow/examples/demo_mnist/"}

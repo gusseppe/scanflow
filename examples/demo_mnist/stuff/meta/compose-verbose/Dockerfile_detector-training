@@ -1,0 +1,12 @@
+
+FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
+
+COPY req_detector.txt req_detector.txt
+RUN pip install -r req_detector.txt
+
+RUN useradd -m -d /executor executor
+RUN chown -R executor /executor
+USER executor
+WORKDIR /executor
+

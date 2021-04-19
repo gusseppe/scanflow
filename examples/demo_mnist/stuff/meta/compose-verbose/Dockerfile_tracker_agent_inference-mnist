@@ -1,0 +1,21 @@
+
+FROM continuumio/miniconda3
+LABEL maintainer='scanflow'
+
+RUN pip install mlflow==1.14.1
+RUN pip install fastapi
+RUN pip install uvicorn
+RUN pip install aiohttp
+RUN pip install aiodns
+
+ENV AGENT_PORT  8003
+ENV AGENT_HOME  /tracker/agent
+
+RUN useradd -m -d /tracker tracker
+RUN mkdir -p $AGENT_HOME
+RUN chown -R tracker /tracker
+USER tracker
+WORKDIR $AGENT_HOME
+
+CMD uvicorn tracker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+
