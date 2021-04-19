@@ -9,6 +9,7 @@ import shutil
 import docker
 import logging
 import mlflow
+from mlflow.tracking import MlflowClient
 
 from pathlib import Path
 from textwrap import dedent
@@ -21,6 +22,9 @@ logging.getLogger().setLevel(logging.INFO)
 
 client = docker.from_env()
 
+mlflow.set_tracking_uri("http://0.0.0.0:8002")
+tracker_uri = mlflow.get_tracking_uri()
+mlflow_client = MlflowClient(tracker_uri)
 
 class Tracker:
     def __init__(self, app_dir, verbose=True):
@@ -59,20 +63,27 @@ class Tracker:
             backend_file = os.path.join(self.paths['tracker_dir'], 'backend.sqlite')
             mlruns_artifacts = os.path.join(self.paths['tracker_dir'], 'mlruns')
 
+            # for r_model in mlflow_client.list_registered_models():
+            #     print(r_model.name)
+            #     mlflow_client.delete_registered_model(name=r_model.name)
+            #
+            # logging.info(f"[Tracker repository] registered models were removed successfully.")
+
             try:
                 os.remove(backend_file)
-                logging.info(f"[Tracker] {backend_file} was removed successfully.")
+                logging.info(f"[Tracker repository] {backend_file} was removed successfully.")
             except OSError as e:
-                logging.error(f"[Tracker] {e.filename} - {e.strerror}.")
+                logging.error(f"[Tracker repository] {e.filename} - {e.strerror}.")
 
             try:
                 shutil.rmtree(mlruns_artifacts)
-                logging.info(f"[Tracker] {mlruns_artifacts} was removed successfully.")
-                # logging.info(f"[Tracker] Please stop and run the workflows again.")
+                logging.info(f"[Tracker repository] {mlruns_artifacts} was removed successfully.")
+                # logging.info(f"[Tracker repository] Please stop and run the workflows again.")
             except OSError as e:
-                logging.error(f"[Tracker] {e.filename} - {e.strerror}.")
+                logging.error(f"[Tracker repository] {e.filename} - {e.strerror}.")
 
-            logging.info(f"[Tracker] Please stop and run the workflows again.")
+
+            logging.info(f"[Tracker repository] Please stop and run all the executors.")
 
         elif confirmation.lower() == 'no':
             print("No changes were performed.")
