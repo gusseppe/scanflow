@@ -13,7 +13,7 @@ from pathlib import Path
 @click.option("--model_name", default='mnist_cnn', type=str)
 @click.option("--model_version",  default=1, type=int)
 @click.option("--x_inference_path", help="New data",
-              default='./images', type=str)
+              default='./mnist_sample/test_images.npy', type=str)
 def inference(model_name, model_version, x_inference_path):
     with mlflow.start_run(run_name='inference_batch') as mlrun:
 

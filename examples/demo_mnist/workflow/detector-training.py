@@ -13,44 +13,33 @@ import os
 from datetime import datetime
 from pathlib import Path
 
-@click.command(help="Detect anomalies")
+@click.command(help="Train a detector")
+@click.option("--name", default='detector_mnist', type=str)
 @click.option("--x_train_path", default='./images', type=str)
-@click.option("--x_inference_path", default='./images', type=str)
-@click.option("--detector_path", help="",
-              default='./detector.hdf5', type=str)
-def detector(x_train_path, x_inference_path, detector_path):
-    with mlflow.start_run(run_name='detector') as mlrun:
+def detector(name, x_train_path):
+    with mlflow.start_run(run_name='detector-training') as mlrun:
 
         img_rows, img_cols = 28, 28
         x_train = np.load(x_train_path)
-        x_test = np.load(x_inference_path)
         
         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols)
-        x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols)
         
-        date = datetime.today()
-
-        detector, E_full, E_test, test = detector_utils.get_detector(x_train, x_test, 
-                                                    epochs=10, 
-                                                    model_path=detector_path,
-                                                    date=date, 
-                                                    wanted_anomalies=50)
-        model_name = 'detector'
-        mlflow.tensorflow.log_model(detector, artifact_path=model_name, 
-#                                  signature=signature, 
-                                 registered_model_name=model_name,
-                                 input_example=x_test[:2])
+        # ddae_history contains some metrics
+        detector, ddae_history = detector_utils.train(x_train, 
+                                                    epochs=3, 
+                                                    batch_size=128,
+                                                    model_path='detector.hdf5')
         
-        E_full.to_csv("E_full.csv", index=True)
-        E_test.to_csv("E_test.csv", index=True)
+        # Later we will support saving on Model Registry, similar as Training step
+#         mlflow.tensorflow.log_model(detector, artifact_path=name, 
+#                                    registered_model_name=name)
         
-
-        mlflow.log_param(key='n_anomalies', value=sum(E_test['Anomaly']))
+        x_train_path = 'x_train.npy'
+        with open(x_train_path, 'wb') as f:
+            np.save(f, x_train)        
  
-        print(E_test.head())
-
-        mlflow.log_artifact('E_full.csv')
-        mlflow.log_artifact('E_test.csv')
+#         mlflow.log_artifact(ddae_history.history['val_loss'])
+        mlflow.log_artifact(x_train_path)
 
 
 if __name__ == '__main__':

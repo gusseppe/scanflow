@@ -4,6 +4,10 @@ import pandas as pd
 import os
 from scipy.stats import gaussian_kde
 
+from tensorflow.keras.layers import Input, Dropout, Dense, Activation, Flatten, BatchNormalization
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, UpSampling2D, LeakyReLU
+from tensorflow.keras.models import Model, Sequential
+
 RANDOM_STATE_SEED = 42
 
 def deep_denoise_ae():
@@ -154,7 +158,27 @@ def get_detector(x_train_, x_test, date=None,
 
     return ddae_model, E_full, E_test, x_test_df
 
+def train(x_train, epochs=25, batch_size=128, model_path='checker.hdf5'):
 
+    x_train = scale(np.copy(x_train))
+
+    print("[+] Training Checker")
+    NUM_EPOCHS=epochs
+
+    BATCH_SIZE=batch_size
+    # BATCH_SIZE = 32
+
+    ddae_model = deep_denoise_ae()
+    ddae_model.compile(optimizer='adadelta',
+                       loss='mse')
+    ddae_history = ddae_model.fit(x_train, x_train , # x_train_noisy x_train_
+                                  batch_size=BATCH_SIZE,
+                                  epochs=NUM_EPOCHS,
+                                  validation_split=0.1,
+                                  verbose=1)
+    ddae_model.save(model_path)
+    
+    return ddae_model, ddae_history
 
 def kde(x, x_grid, bandwidth=0.2, default=False):
   

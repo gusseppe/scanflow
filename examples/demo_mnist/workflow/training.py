@@ -59,6 +59,13 @@ def training(model_name, x_train_path, y_train_path, x_test_path, y_test_path):
 #             version=1,
 #             stage="Staging"
 #         )  
+        x_train_path = 'x_train.npy'
+        y_train_path = 'y_train.npy'
+        with open(x_train_path, 'wb') as f:
+            np.save(f, x_train)
+        with open(y_train_path, 'wb') as f:
+            np.save(f, y_train)
+            
         model_path = './model'
         if os.path.isdir(model_path):
             shutil.rmtree(model_path, ignore_errors=True)
@@ -67,10 +74,11 @@ def training(model_name, x_train_path, y_train_path, x_test_path, y_test_path):
             
         mlflow.log_param(key='accuracy', value=round(mnist_score, 2))
 
-        mlflow.log_artifact(x_train_path, 'dataset')
-        mlflow.log_artifact(y_train_path, 'dataset')
-        mlflow.log_artifact(x_test_path, 'dataset')
-        mlflow.log_artifact(y_test_path, 'dataset')
+#         mlflow.log_artifact(x_train_path, 'dataset')
+        mlflow.log_artifact(x_train_path)
+        mlflow.log_artifact(y_train_path)
+        mlflow.log_artifact(x_test_path)
+        mlflow.log_artifact(y_test_path)
 
 
 class CNN(nn.Module):
