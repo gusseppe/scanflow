@@ -113,7 +113,12 @@ to start the server.
 
 .. code-block:: bash
 
-    python server.py
+    python cli.py server
+    
+Dashboard alpha
+-----------------
+.. image:: https://drive.google.com/uc?export=view&id=1lJxQ693Rjr7zYiy2MjDi07dug-uBcGed
+https://drive.google.com/uc?export=view&id=1ii7wyXqsDA-eiyA5pI3Y1yccWg-p4FFC
 
 Tutorials
 -----------
@@ -146,3 +151,4 @@ Installation
 .. code-block:: bash
 
     pip install scanflow
+    
