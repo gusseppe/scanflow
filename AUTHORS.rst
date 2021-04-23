@@ -2,12 +2,8 @@
 Credits
 =======
 
-Development Lead
-----------------
-
-* Gusseppe Bravo <gusseppebravo@gmail.com>
-
 Contributors
 ------------
-
-None yet. Why not be the first?
+* Gusseppe Bravo <gusseppebbravo@bsc.es>
+* Peini Liu <peini.liu@bsc.es>
+* Jordi Guitart <jordi.guitart@bsc.es>
