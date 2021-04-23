@@ -135,7 +135,7 @@ Installation
 ------------
 
 - Install docker.
-- sudo usermod -aG docker <your-user>
+- sudo usermod -aG docker <your-user> (on Linux)
 
 **Using conda**
 
