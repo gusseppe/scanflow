@@ -39,7 +39,7 @@ Offline Debugging
 
 Online Debugging
 -----------------
-.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/online_debugging.png
+.. image:: https://www.frevvo.com/blog/wp-content/uploads/2019/11/Frevvo_Guide_Digital_Workflow_School_DW.png
 
 Features
 --------
@@ -67,7 +67,7 @@ Define your working folder and workflows.
 
     # App folder
     base_path = os.path.dirname(os.getcwd())
-    app_dir = os.path.join(base_path, "examples/demo2/data-science/")
+    app_dir = os.path.join(base_path, "examples/demo_leaf/")
 
     gathering = Executor(name='gathering',
                            file='gathering.py',
@@ -111,18 +111,22 @@ run each workflow.
     # Run the user's code on the containers
     deployer.run_workflows()
 
+All the containers will be shown in the scanflow UI, run the following 
+to start the server.
 
+.. code-block:: bash
 
-Once the workflows are executed, you can gather the
-tracked values using a Tracker special node.
+    python server.py
 
-.. code-block:: python
+Tutorials
+-----------
 
-    from scanflow.track import Tracker
+Please check the jupyter notebooks for more examples:
 
-    tracker = Tracker(app_dir)
-    df = tracker.get_tracked_values(workflow_name='workflow1')
+.. code-block:: bash
 
+    tutorials/
+    
 Installation
 ------------
 
