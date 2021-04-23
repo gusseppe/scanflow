@@ -13,6 +13,8 @@ import requests
 import json
 import matplotlib.pyplot as plt
 import networkx as nx
+import mlflow
+from mlflow.tracking import MlflowClient
 import getpass
 
 from textwrap import dedent
@@ -744,8 +746,10 @@ def start_image(image, name, network=None, **kwargs):
 
             return env_container
         else:
+            container_from_env = client.containers.get(name)
             logging.warning(f'[+] Environment: [{name}] is already running.')
             # logging.info(f'[+] Image [{name}] was loaded successfully.')
+            return container_from_env
 
     except docker.api.client.DockerException as e:
         logging.error(f"{e}")
@@ -1010,6 +1014,72 @@ def save_workflow(workflow, name, path):
 
     with open(workflow_metadata_path, 'w') as fout:
         json.dump(workflow, fout)
+
+
+def track_containers(containers_info, path):
+    run_name = "containers_alive"
+    containers_metadata_name = f'{run_name}.json'
+    containers_metadata_path = os.path.join(path, containers_metadata_name)
+
+    try: # if run_name exists then loads it
+        with open(containers_metadata_path) as fread:
+            containers_info_loaded = json.load(fread)
+
+        # append alive containers with new containers
+        containers_info_loaded.extend(containers_info)
+
+        #remove duplicates
+        containers_info = [dict(t) for t in {tuple(d.items()) for d in containers_info_loaded}]
+
+        with open(containers_metadata_path, 'w') as fout:
+            json.dump(containers_info, fout)
+
+    except: # If not, create a new one
+        logging.info(f"[-] Creating new [{run_name}.son].")
+        with open(containers_metadata_path, 'w') as fout:
+            json.dump(containers_info, fout)
+
+    mlflow.set_tracking_uri("http://0.0.0.0:8002")
+    client = MlflowClient()
+    experiment_name = 'Scanflow'
+    experiment = client.get_experiment_by_name(experiment_name)
+
+    if experiment:
+        experiment_id = experiment.experiment_id
+        logging.info(f"[Tracker]  '{experiment_name}' experiment loaded.")
+    else:
+        experiment_id = client.create_experiment(experiment_name)
+        logging.info(f"[Tracker]  '{experiment_name}' experiment does not exist. Creating a new one.")
+
+
+    with mlflow.start_run(experiment_id=experiment_id,
+                          run_name="containers") as mlrun:
+        # for container_info in containers_info:
+        d = {'path': containers_metadata_path,
+             'live containers': len(containers_info)}
+        mlflow.log_params(d)
+            # TODO: create a FTP server and put it on a container
+            # mlflow.log_dict(container_info, f"{container_info['name']}.json")
+
+def remove_track_containers(container_names, path):
+    run_name = "containers_alive"
+    containers_metadata_name = f'{run_name}.json'
+    containers_metadata_path = os.path.join(path, containers_metadata_name)
+
+    try: # if run_name exists then loads it
+        with open(containers_metadata_path) as fread:
+            containers_info_loaded = json.load(fread)
+
+        new_list = list()
+        for container in containers_info_loaded:
+            if container['name'] not in container_names:
+                new_list.append(container)
+
+        with open(containers_metadata_path, 'w') as fout:
+            json.dump(new_list, fout)
+
+    except: # If not, create a new one
+        logging.info(f"[-] No exists [{run_name}.son].")
 
 def read_workflows(paths):
     meta_dir = paths['meta_dir']

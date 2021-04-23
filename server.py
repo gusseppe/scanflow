@@ -3,15 +3,20 @@ import uvicorn
 import os
 import logging
 
+from scanflow.server import ui
 from scanflow.deploy.deploy import Deploy
 from scanflow import tools
 from fastapi import FastAPI
+from fastapi.middleware.wsgi import WSGIMiddleware
 
+import dash
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
 
 
+
+# FASTAPI
 app = FastAPI(title='Scanflow API',
               description='Server that allows agents to manipulate the user workflow.',
               )
@@ -42,6 +47,10 @@ async def run_workflow(content: dict):
     response = {"result": result}
 
     return response
+
+app_dash = ui.app_dash
+
+app.mount("/", WSGIMiddleware(app_dash.server))
 
 if __name__ == "__main__":
     uvicorn.run("server:app", host="0.0.0.0", port=8050, reload=True)

@@ -51,6 +51,7 @@ class Deploy:
         else:
             self.workflows_user = None
         # tools.check_verbosity(verbose)
+        self.containers_info = None
         self.logs_run_workflow = list()
         self.logs_build_image = None
         self.predictor_repr = None
@@ -324,7 +325,15 @@ class Deploy:
         if self.workflows_user is not None:
             for wflow_user in tqdm(self.workflows_user):
                 logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
-                containers, tracker_ctn = self.__start_workflow(wflow_user, **kwargs)
+                self.containers_info = self.__start_workflow(wflow_user, **kwargs)
+
+                # cast containers_info: REFACTOR THIS
+                new_containers_info = list()
+                for container_info in self.containers_info:
+                    container_info['ctn'] = str(container_info['ctn'])
+                    new_containers_info.append(container_info)
+
+                tools.track_containers(new_containers_info, self.paths['meta_dir'])
                 logging.info(f"[+] Workflow: [{wflow_user['name']}] was started successfully.")
                 # for w in self.workflows:
                 #     if w['name'] == wflow_user['name']:
@@ -406,7 +415,7 @@ class Deploy:
                                                   network=net_name,
                                                   **kwargs)
 
-            containers.append({'name': env_image_name, 'ctn': env_container})
+            containers.append({'name': env_tag_name, 'type':'executor', 'ctn': env_container})
 
         if 'tracker' in workflow.keys():
             list_containers = []
@@ -442,7 +451,7 @@ class Deploy:
                                                   network=net_name,
                                                   **kwargs)
 
-            tracker_container = {'name': tracker_image_name,
+            tracker_container = {'name': tracker_image_name, 'type':'tracker',
                                  'ctn': tracker_container, 'port': workflow['tracker']['port']}
 
             list_containers.append(tracker_container)
@@ -466,7 +475,7 @@ class Deploy:
                                                       **kwargs)
 
 
-                tracker_agent_container = {'name': tracker_image_agent_name,
+                tracker_agent_container = {'name': tracker_image_agent_name, 'type':'agent',
                                      'ctn': tracker_agent_container, 'port': port_agent}
                 list_containers.append(tracker_agent_container)
 
@@ -532,7 +541,7 @@ class Deploy:
                                                                 network=net_name,
                                                                 **kwargs)
 
-                    checker_agent_container = {'name': checker_image_agent_name,
+                    checker_agent_container = {'name': checker_image_agent_name, 'type':'agent',
                                                'ctn': checker_agent_container, 'port': port_agent}
                     list_containers.append(checker_agent_container)
 
@@ -587,7 +596,7 @@ class Deploy:
                                                                 network=net_name,
                                                                 **kwargs)
 
-                    improver_agent_container = {'name': improver_image_agent_name,
+                    improver_agent_container = {'name': improver_image_agent_name, 'type':'agent',
                                                'ctn': improver_agent_container, 'port': port_agent}
                     list_containers.append(improver_agent_container)
 
@@ -640,7 +649,7 @@ class Deploy:
                                                                  network=net_name,
                                                                  **kwargs)
 
-                    planner_agent_container = {'name': planner_image_agent_name,
+                    planner_agent_container = {'name': planner_image_agent_name, 'type':'agent',
                                                 'ctn': planner_agent_container, 'port': port_agent}
                     list_containers.append(planner_agent_container)
 
@@ -694,12 +703,15 @@ class Deploy:
                                                             network=net_name,
                                                             **kwargs)
 
-                predictor_container = {'name': predictor_image_name,
+                predictor_container = {'name': predictor_image_name, 'type':'predictor',
                                            'ctn': predictor_container, 'port': port}
                 list_containers.append(predictor_container)
-            return containers, list_containers
 
-        return containers, [None]
+            containers.extend(list_containers)
+            # return containers, list_containers
+
+        return containers
+        # return containers, [None]
 
     def stop_workflows(self, tracker=True, checker=True,
                        improver=True, planner=True, predictor=True, network=True):
@@ -711,9 +723,13 @@ class Deploy:
         tools.check_verbosity(verbose)
 
         for wflow in self.workflows_user:
-            self.__stop_workflow(wflow, tracker, checker, improver, planner, predictor, network)
+            containers_removed = self.__stop_workflow(wflow, tracker, checker,
+                                                      improver, planner, predictor, network)
+
+            tools.remove_track_containers(containers_removed, self.paths['meta_dir'])
 
     def __stop_workflow(self, workflow, tracker, checker, improver, planner, predictor, network):
+        container_names = list()
 
         for executor in workflow['executors']:
             executor_name = f"{workflow['name']}-{executor['name']}"
@@ -722,7 +738,7 @@ class Deploy:
                 container_from_env.stop()
                 container_from_env.remove()
                 logging.info(f"[+] Environment: [{executor_name}] was stopped successfully.")
-
+                container_names.append(executor_name)
             except docker.api.client.DockerException as e:
                 # logging.error(f"{e}")
                 logging.info(f"[+] Environment: [{executor_name}] is not running in local.")
@@ -736,6 +752,7 @@ class Deploy:
                     container_from_env.remove()
                     logging.info(f"[+] Tracker: [{tracker_image_name}] was stopped successfully.")
 
+                    container_names.append(tracker_image_name)
                 except docker.api.client.DockerException as e:
                     # logging.error(f"{e}")
                     logging.info(f"[+] Tracker: [{tracker_image_name}] is not running in local.")
@@ -747,6 +764,7 @@ class Deploy:
                         container_from_env.stop()
                         container_from_env.remove()
                         logging.info(f"[+] Tracker agent: [{tracker_agent_image_name}] was stopped successfully.")
+                        container_names.append(tracker_agent_image_name)
 
                     except docker.api.client.DockerException as e:
                         # logging.error(f"{e}")
@@ -771,7 +789,7 @@ class Deploy:
                         container_from_env.stop()
                         container_from_env.remove()
                         logging.info(f"[+] Checker agent: [{checker_agent_image_name}] was stopped successfully.")
-
+                        container_names.append(checker_agent_image_name)
                     except docker.api.client.DockerException as e:
                         # logging.error(f"{e}")
                         logging.info(f"[+] Checker agent: [{checker_agent_image_name}] is not running in local.")
@@ -785,6 +803,7 @@ class Deploy:
                         container_from_env.stop()
                         container_from_env.remove()
                         logging.info(f"[+] Improver agent: [{improver_agent_image_name}] was stopped successfully.")
+                        container_names.append(improver_agent_image_name)
 
                     except docker.api.client.DockerException as e:
                         # logging.error(f"{e}")
@@ -800,6 +819,7 @@ class Deploy:
                         container_from_env.remove()
                         logging.info(f"[+] Planner agent: [{planner_agent_image_name}] was stopped successfully.")
 
+                        container_names.append(planner_agent_image_name)
                     except docker.api.client.DockerException as e:
                         # logging.error(f"{e}")
                         logging.info(f"[+] Planner agent: [{planner_agent_image_name}] is not running in local.")
@@ -814,6 +834,7 @@ class Deploy:
                     container_from_env.remove()
                     logging.info(f"[+] Predictor agent: [{predictor_image_name}] was stopped successfully.")
 
+                    container_names.append(predictor_image_name)
                 except docker.api.client.DockerException as e:
                     # logging.error(f"{e}")
                     logging.info(f"[+] Predictor agent: [{predictor_image_name}] is not running in local.")
@@ -835,6 +856,8 @@ class Deploy:
             except docker.api.client.DockerException as e:
                 # logging.error(f"{e}")
                 logging.info(f"[+] Network: [{net_name}] is not running in local.")
+
+        return container_names
 
     def run_workflows(self, verbose: bool = False):
         """

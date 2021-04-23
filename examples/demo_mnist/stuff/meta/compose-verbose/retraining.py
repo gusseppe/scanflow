@@ -67,12 +67,13 @@ def retraining(model_name, run_id, x_new_train_artifact, y_new_train_artifact, x
         else:
             mlflow.pytorch.save_model(model_mnist, model_path)
             
-        mlflow.log_param(key='accuracy', value=round(mnist_score, 2))
+        mlflow.log_metric(key='accuracy', value=round(mnist_score, 2))
+        mlflow.log_param(key='x_len', value=x_train.shape[0])
 
-        mlflow.log_artifact(x_train_path, 'dataset')
-        mlflow.log_artifact(y_train_path, 'dataset')
-        mlflow.log_artifact(x_test_path, 'dataset')
-        mlflow.log_artifact(y_test_path, 'dataset')
+        mlflow.log_artifact(x_train_path)
+        mlflow.log_artifact(y_train_path)
+        mlflow.log_artifact(x_test_path)
+        mlflow.log_artifact(y_test_path)
 
 if __name__ == '__main__':
     retraining()
