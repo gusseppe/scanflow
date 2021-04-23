@@ -62,11 +62,11 @@ Ready to contribute? Here's how to set up `scanflow` for local development.
 1. Fork the `scanflow` repo on GitHub.
 2. Clone your fork locally::
 
-    $ git clone git@github.com:your_name_here/scanflow.git
+    $ git clone git@github.com:gusseppe/scanflow.git
 
 3. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development::
 
-    $ mkvirtualenv scanflow
+    $ virtualenv scanflow
     $ cd scanflow/
     $ python setup.py develop
 
