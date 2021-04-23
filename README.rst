@@ -33,13 +33,10 @@ usability, integration for deployment and real-time checking.
 * Free software: MIT license
 * Documentation: https://scanflow.readthedocs.io.
 
-Offline Debugging
------------------
-.. image:: https://github.com/gusseppe/scanflow/blob/master/pictures/offline_debugging.png
 
-Online Debugging
+Workflow + Agents
 -----------------
-.. image:: https://www.frevvo.com/blog/wp-content/uploads/2019/11/Frevvo_Guide_Digital_Workflow_School_DW.png
+.. image:: https://doc-0g-98-docs.googleusercontent.com/docs/securesc/ba0j9ke6lfrv8k2ocjus2bk51lgm4b2c/07mnc7bpn74i68v0t2q5reqju6p50tmj/1619141475000/12474180553255750962/12474180553255750962/1lJxQ693Rjr7zYiy2MjDi07dug-uBcGed?e=view&authuser=0&nonce=htbh20a5hmcco&user=12474180553255750962&hash=2ur6nduh45iu43htig92l6eoagui4vr5
 
 Features
 --------
