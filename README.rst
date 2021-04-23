@@ -117,8 +117,8 @@ to start the server.
     
 Dashboard alpha
 -----------------
-.. image:: https://drive.google.com/uc?export=view&id=1lJxQ693Rjr7zYiy2MjDi07dug-uBcGed
-https://drive.google.com/uc?export=view&id=1ii7wyXqsDA-eiyA5pI3Y1yccWg-p4FFC
+.. image:: https://drive.google.com/uc?export=view&id=1ii7wyXqsDA-eiyA5pI3Y1yccWg-p4FFC
+
 
 Tutorials
 -----------
