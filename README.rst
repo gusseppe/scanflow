@@ -36,7 +36,7 @@ usability, integration for deployment and real-time checking.
 
 Workflow + Agents
 -----------------
-.. image:: https://doc-0g-98-docs.googleusercontent.com/docs/securesc/ba0j9ke6lfrv8k2ocjus2bk51lgm4b2c/07mnc7bpn74i68v0t2q5reqju6p50tmj/1619141475000/12474180553255750962/12474180553255750962/1lJxQ693Rjr7zYiy2MjDi07dug-uBcGed?e=view&authuser=0&nonce=htbh20a5hmcco&user=12474180553255750962&hash=2ur6nduh45iu43htig92l6eoagui4vr5
+.. image:: https://drive.google.com/uc?export=view&id=1lJxQ693Rjr7zYiy2MjDi07dug-uBcGed
 
 Features
 --------
