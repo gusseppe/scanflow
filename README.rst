@@ -113,10 +113,12 @@ to start the server.
 
 .. code-block:: bash
 
-    python cli.py server
+    python cli.py server --server_port 8050
     
 Dashboard alpha
 -----------------
+
+- Go to: http://localhost:8050
 .. image:: https://drive.google.com/uc?export=view&id=1ii7wyXqsDA-eiyA5pI3Y1yccWg-p4FFC
 
 
