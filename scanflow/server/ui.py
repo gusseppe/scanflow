@@ -105,6 +105,29 @@ def set_cards(client):
 
     return rows
 
+sidebar = html.Div(
+    [
+        html.B(html.H2("Scanflow", className="display-4")),
+        html.Hr(),
+        html.P(
+            "UI dashboard. Click on Quick links for API.", className="lead"
+        ),
+        dbc.Nav(
+            [
+                dbc.NavLink("Home", href=f"/", active="exact"),
+                dbc.NavLink("Workflows", href="/page-1", active="exact"),
+                dbc.NavLink("Agents", href="/page-2", active="exact"),
+            ],
+            vertical=True,
+            pills=True,
+        ),
+    ],
+    style=SIDEBAR_STYLE,
+)
+
+content = html.Div(id="page-content", style=CONTENT_STYLE)
+app_dash = dash.Dash(name='Scanflow', external_stylesheets=[dbc.themes.YETI])
+app_dash.title = 'Scanflow'
 # row_2 = dbc.Row(
 #     [
 #         dbc.Col(dbc.Card(card_content, color="success", outline=True)),
@@ -118,34 +141,21 @@ def get_app_dash(client, mlflow_port, server_port):
     rows = set_cards(client)
     cards = html.Div(rows)
 
-    sidebar = html.Div(
-        [
-            html.B(html.H2("Scanflow", className="display-4")),
-            html.Hr(),
-            html.P(
-                "UI dashboard. Click on Quick links for API.", className="lead"
-            ),
-            dbc.Nav(
-                [
-                    dbc.NavLink("Home", href=f"/", active="exact"),
-                    dbc.NavLink("Workflows", href="/page-1", active="exact"),
-                    dbc.NavLink("Agents", href="/page-2", active="exact"),
-                ],
-                vertical=True,
-                pills=True,
-            ),
-        ],
-        style=SIDEBAR_STYLE,
-    )
+    if mlflow_port:
+        mlflow_item = dbc.DropdownMenuItem("Tracker-mlflow",
+                             href=f"http://localhost:{mlflow_port}",
+                             target='_blank'),
+    else:
+        mlflow_item = dbc.DropdownMenuItem("Tracker-mlflow",
+                                           href=f"/",
+                                           target='_blank'),
     navbar = dbc.NavbarSimple(
         children=[
             # dbc.NavItem(dbc.NavLink("Page 1", href="#")),
             dbc.DropdownMenu(
                 children=[
                     # dbc.DropdownMenuItem("More pages", header=True),
-                    dbc.DropdownMenuItem("Tracker-mlflow",
-                                         href=f"http://localhost:{mlflow_port}",
-                                         target='_blank'),
+                    mlflow_item,
                     dbc.DropdownMenuItem("Scanflow API",
                                          href=f"http://localhost:{server_port}/docs",
                                          target='_blank'),
@@ -160,11 +170,6 @@ def get_app_dash(client, mlflow_port, server_port):
         color="primary",
         # dark=True,
     )
-
-    content = html.Div(id="page-content", style=CONTENT_STYLE)
-
-    app_dash = dash.Dash(name='Scanflow', external_stylesheets=[dbc.themes.YETI])
-    app_dash.title = 'Scanflow'
 
     app_dash.layout = html.Div([navbar, dcc.Location(id="url"), sidebar, content])
 

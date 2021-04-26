@@ -912,6 +912,27 @@ class Deploy:
 
         return containers
 
+    def run_executor(self, executor):
+        """
+        Run a workflow that consists of several python files.
+
+        Parameters:
+            workflow (dict): Workflow of executions
+            parallel (bool): Parallel execution
+        Returns:
+            image (object): Docker image.
+        """
+
+
+        logging.info(f"[+] Running env: [{executor}].")
+
+        env_container, result = tools.run_step(executor)
+        response = {'name': executor['name'],
+                   'ctn': env_container,
+                   'result': result.output.decode('utf-8')}
+
+        return response
+
     def build_predictor(self, model_path, image='predictor', name='predictor'):
         """
         Deploy a ML model into a Docker container.

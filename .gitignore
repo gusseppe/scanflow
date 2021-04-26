@@ -45,6 +45,7 @@ stuff/
 # mypy
 .mypy_cache/
 
+scanflow/check
 # dataset
 #examples/demo_mnist_old/
 #examples/demo_mnist/workflow/mnist_c

@@ -955,7 +955,7 @@ def predict(input_path, port=5001):
         logging.error(f"Request to API failed.")
 
 
-def run_step(step, workflow_name):
+def run_step(step, workflow_name=None, tracker_port=8002):
     """
     Run a workflow that consists of several python files.
 
@@ -967,7 +967,11 @@ def run_step(step, workflow_name):
     # logging.info(f'Running workflow: type={self.app_type} .')
     # logging.info(f'[+] Running workflow on [{env_container_name}].')
     try:
-        env_name = f"{workflow_name}-{step['name']}"
+        if workflow_name:
+            env_name = f"{workflow_name}-{step['name']}"
+        else:
+            env_name = f"{step['name']}"
+
         env_container = client.containers.get(env_name)
         if 'parameters' in step.keys():
             cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
@@ -986,6 +990,29 @@ def run_step(step, workflow_name):
         logging.info(f"[+] Output:  {result.output.decode('utf-8')} ")
 
         logging.info(f"[+] Environment ({env_name}) finished successfully. ")
+
+        # mlflow.set_tracking_uri(f"http://0.0.0.0:{tracker_port}")
+        # client = MlflowClient()
+        # experiment_name = 'Scanflow'
+        # experiment = client.get_experiment_by_name(experiment_name)
+        #
+        # if experiment:
+        #     experiment_id = experiment.experiment_id
+        #     logging.info(f"[Tracker]  '{experiment_name}' experiment loaded.")
+        # else:
+        #     experiment_id = client.create_experiment(experiment_name)
+        #     logging.info(f"[Tracker]  '{experiment_name}' experiment does not exist. Creating a new one.")
+        #
+        #
+        # with mlflow.start_run(experiment_id=experiment_id,
+        #                       run_name="containers") as mlrun:
+        #     # for container_info in containers_info:
+        #     d = {'name': step['name'],
+        #          'file': step['file'],
+        #          'requirements': step['requirements']
+        #          }
+        #     d.update(step['parameters'])
+        #     mlflow.log_params(d)
 
         # return env_container, result
         return env_name, result
@@ -1016,7 +1043,7 @@ def save_workflow(workflow, name, path):
         json.dump(workflow, fout)
 
 
-def track_containers(containers_info, path):
+def track_containers(containers_info, path, tracker_port=8002):
     run_name = "containers_alive"
     containers_metadata_name = f'{run_name}.json'
     containers_metadata_path = os.path.join(path, containers_metadata_name)
@@ -1039,7 +1066,7 @@ def track_containers(containers_info, path):
         with open(containers_metadata_path, 'w') as fout:
             json.dump(containers_info, fout)
 
-    mlflow.set_tracking_uri("http://0.0.0.0:8002")
+    mlflow.set_tracking_uri(f"http://0.0.0.0:{tracker_port}")
     client = MlflowClient()
     experiment_name = 'Scanflow'
     experiment = client.get_experiment_by_name(experiment_name)

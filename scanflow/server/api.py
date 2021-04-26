@@ -69,5 +69,24 @@ def get_app_fastapi(client, mas_port):
 
         return response
 
+    @app.post("/run/executor",
+              tags=['Running'],
+              summary="Run an executor")
+    async def run_executor(content: dict):
+
+        executor_name = content['name']
+        runs_info = client.search_runs("0", f"tag.mlflow.runName='{executor_name}'",
+                                                 order_by=["attribute.start_time DESC"],
+                                                 max_results=1)
+        filename = runs_info[0].data.params['file']
+        content.update(filename)
+
+        deployer = Deploy()
+        result = deployer.run_executor(content)
+        # result = deployer.logs_run_workflow[0]['envs'][0]['result']
+
+        response = {"result": result}
+
+        return response
 
     return app

@@ -13,9 +13,12 @@ server_port = sys.argv[1]
 mlflow_port = sys.argv[2]
 mas_port = sys.argv[3]
 
-tracker_uri = f"http://0.0.0.0:{mlflow_port}"
-mlflow.set_tracking_uri(tracker_uri)
-client = MlflowClient()
+try:
+    tracker_uri = f"http://0.0.0.0:{mlflow_port}"
+    mlflow.set_tracking_uri(tracker_uri)
+    client = MlflowClient()
+except:
+    client = None
 
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
