@@ -57,34 +57,7 @@ def set_card_content(ctn_type, ctn_name, url=None):
 
     return card_content
 
-def set_cards(client):
-    experiment = client.get_experiment_by_name("Scanflow")
-    experiment_id = experiment.experiment_id
-
-
-    runs_info = client.search_runs(experiment_id, "tag.mlflow.runName='containers'",
-                                   order_by=["attribute.start_time DESC"],
-                                   max_results=1)
-    containers_metadata_path = runs_info[0].data.params['path']
-    with open(containers_metadata_path) as fread:
-        containers_info_loaded = json.load(fread)
-
-    cards = list()
-    for container_info in containers_info_loaded:
-        ctn_name = container_info['name']
-        ctn_type = container_info['type']
-        if 'port' in container_info.keys():
-            if ctn_type == 'agent':
-                url = f"http://localhost:{container_info['port']}/docs"
-            else:
-                url = f"http://localhost:{container_info['port']}"
-
-            card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
-        else:
-            card_content = set_card_content(ctn_type.capitalize(), ctn_name)
-
-        card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
-        cards.append(card)
+def layout_rows(cards):
 
     rows = list()
     step = 3
@@ -105,18 +78,65 @@ def set_cards(client):
 
     return rows
 
+def set_cards(client):
+    experiment = client.get_experiment_by_name("Scanflow")
+    experiment_id = experiment.experiment_id
+
+
+    runs_info = client.search_runs(experiment_id, "tag.mlflow.runName='containers'",
+                                   order_by=["attribute.start_time DESC"],
+                                   max_results=1)
+    containers_metadata_path = runs_info[0].data.params['path']
+    with open(containers_metadata_path) as fread:
+        containers_info_loaded = json.load(fread)
+
+    cards = list()
+    executor_cards = list()
+    agent_cards = list()
+    for container_info in containers_info_loaded:
+        ctn_name = container_info['name']
+        ctn_type = container_info['type']
+        if 'port' in container_info.keys():
+            if ctn_type == 'agent':
+                url = f"http://localhost:{container_info['port']}/docs"
+                card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
+                card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+                agent_cards.append(card)
+            else: #mlflow
+                url = f"http://localhost:{container_info['port']}"
+
+            card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
+        else: #executors
+            card_content = set_card_content(ctn_type.capitalize(), ctn_name)
+            card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+            executor_cards.append(card)
+
+        card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+        cards.append(card)
+
+    rows = layout_rows(cards)
+    cards = html.Div(rows)
+
+    executor_rows = layout_rows(executor_cards)
+    executor_cards = html.Div(executor_rows)
+
+    agent_rows = layout_rows(agent_cards)
+    agent_cards = html.Div(agent_rows)
+
+    return cards, executor_cards, agent_cards
+
 sidebar = html.Div(
     [
         html.B(html.H2("Scanflow", className="display-4")),
         html.Hr(),
         html.P(
-            "UI dashboard. Click on Quick links for API.", className="lead"
+            "UI dashboard. /docs for API.", className="lead"
         ),
         dbc.Nav(
             [
                 dbc.NavLink("Home", href=f"/", active="exact"),
-                dbc.NavLink("Workflows", href="/page-1", active="exact"),
-                dbc.NavLink("Agents", href="/page-2", active="exact"),
+                dbc.NavLink("Executors", href="/executors", active="exact"),
+                dbc.NavLink("Agents", href="/agents", active="exact"),
             ],
             vertical=True,
             pills=True,
@@ -125,9 +145,6 @@ sidebar = html.Div(
     style=SIDEBAR_STYLE,
 )
 
-content = html.Div(id="page-content", style=CONTENT_STYLE)
-app_dash = dash.Dash(name='Scanflow', external_stylesheets=[dbc.themes.YETI])
-app_dash.title = 'Scanflow'
 # row_2 = dbc.Row(
 #     [
 #         dbc.Col(dbc.Card(card_content, color="success", outline=True)),
@@ -138,17 +155,21 @@ app_dash.title = 'Scanflow'
 # )
 
 def get_app_dash(client, mlflow_port, server_port):
-    rows = set_cards(client)
-    cards = html.Div(rows)
+    content = html.Div(id="page-content", style=CONTENT_STYLE)
+    app_dash = dash.Dash(name='Scanflow', external_stylesheets=[dbc.themes.YETI])
+    app_dash.title = 'Scanflow'
 
-    if mlflow_port:
+    if client:
+        cards, executor_cards, agent_cards = set_cards(client)
         mlflow_item = dbc.DropdownMenuItem("Tracker-mlflow",
                              href=f"http://localhost:{mlflow_port}",
-                             target='_blank'),
+                             target='_blank')
     else:
         mlflow_item = dbc.DropdownMenuItem("Tracker-mlflow",
                                            href=f"/",
-                                           target='_blank'),
+                                           target='_blank')
+        cards = None
+
     navbar = dbc.NavbarSimple(
         children=[
             # dbc.NavItem(dbc.NavLink("Page 1", href="#")),
@@ -178,10 +199,12 @@ def get_app_dash(client, mlflow_port, server_port):
         if pathname == "/":
             return cards
             # return html.P("Here you will find basic information about the system.")
-        elif pathname == "/page-1":
-            return html.P("This will contain all the deployed workflows.")
-        elif pathname == "/page-2":
-            return html.P("This will contain information about your agents.")
+        elif pathname == "/executors":
+            return executor_cards
+            # return html.P("This will contain all the deployed workflows.")
+        elif pathname == "/agents":
+            return agent_cards
+            # return html.P("This will contain information about your agents.")
         # If the user tries to reach a different page, return a 404 message
         return dbc.Jumbotron(
             [

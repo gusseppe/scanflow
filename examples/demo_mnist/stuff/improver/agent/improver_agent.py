@@ -35,7 +35,8 @@ class Config():
     checker_uri = "http://inference-mnist-checker-agent:8005/feedback/anomaly/last"
     planner_uri = "http://inference-mnist-planner-agent:8007/planner/plans"
 
-    host_uri = 'http://192.168.96.1:8050/run/workflow'
+    host_uri = 'http://192.168.96.1:8050/run/executor'
+    # host_uri = 'http://192.168.96.1:8050/run/workflow'
 
 experiment = client.get_experiment_by_name(Config.agent_name)
 
@@ -93,8 +94,9 @@ async def execute_improver(feedback: dict):
 
         new_model_name = 'mnist_cnn_new'
         scanflow_request = {
-            'app_dir': Config.app_dir,
-            'name': 'retraining-mnist',
+            # 'app_dir': Config.app_dir,
+            'name': 'retraining-mnist-retraining',
+            # 'name': 'retraining-mnist',
             'parameters':{
                 'run_id': feedback['checker_agent_run_id'],
                 'model_name': new_model_name,

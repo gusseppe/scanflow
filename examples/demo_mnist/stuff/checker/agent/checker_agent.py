@@ -25,7 +25,8 @@ client = MlflowClient()
 class Config():
     agent_name = 'Checker'
     app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
-    host_uri = 'http://192.168.96.1:8050/run/workflow'
+    host_uri = 'http://192.168.96.1:8050/run/executor'
+    # host_uri = 'http://192.168.96.1:8050/run/workflow'
 
 experiment = client.get_experiment_by_name(agent_name)
 
@@ -142,19 +143,20 @@ async def execute_checker_anomaly(content: Dict[str, str]):
     y_train = np.load(y_train_path)
 
     scanflow_request = {
-        'app_dir': Config.app_dir,
-        'name': 'detector-mnist',
+        # 'app_dir': Config.app_dir,
+        'name': 'detector-inference-mnist-detector-batch',
+        # 'name': 'detector-mnist',
         'parameters':{
             'run_id': content['run_inference_id'],
             'x_inference_artifact': content['x_inference_artifact'],
             'y_inference_artifact': content['y_inference_artifact']
         },
     }
-    request = {'app_dir': scanflow_request['app_dir'],
-               'name': scanflow_request['name'], # workflow name
-               'parameters': scanflow_request['parameters']}
+    # request = {'app_dir': scanflow_request['app_dir'],
+    #            'name': scanflow_request['name'], # workflow name
+    #            'parameters': scanflow_request['parameters']}
 
-    async with app.aiohttp_session.post(Config.host_uri, json=request) as response:
+    async with app.aiohttp_session.post(Config.host_uri, json=scanflow_request) as response:
         result_host = await response.json(content_type=None)
 
     print(result_host)

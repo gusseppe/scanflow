@@ -16,7 +16,7 @@ from scanflow.deploy import Deploy
 base_path = os.path.dirname(os.path.dirname(os.getcwd()))
 app_dir = os.path.join(base_path, "examples/demo_mnist/")
 
-content = {'app_dir': app_dir, 'name': 'inference-mnist'}
+content = {'name': 'inference-mnist-inference-batch'}
 
 def inference(x_inference):
     filename = 'x_inference_dashboard.npy'
@@ -46,16 +46,16 @@ def inference(x_inference):
     
     return predictions['predictions'].values
  
-def trigger_mas():
-    import requests
+# def trigger_mas():
+#     import requests
 
-    url = 'http://localhost:8003/send/checker/anomaly'
-    response = requests.get(
-        url=url,
-        headers={"accept": "application/json"})
+#     url = 'http://localhost:8003/send/checker/anomaly'
+#     response = requests.get(
+#         url=url,
+#         headers={"accept": "application/json"})
 
-    response_json = json.loads(response.text)
-    print(response_json)
+#     response_json = json.loads(response.text)
+#     print(response_json)
     
 def classifier(folder):
     result = dict()

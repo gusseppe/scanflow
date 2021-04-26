@@ -1044,6 +1044,15 @@ def save_workflow(workflow, name, path):
 
 
 def track_containers(containers_info, path, tracker_port=8002):
+
+    # Cast container info to string
+    new_containers_info = list()
+    for container_info in containers_info:
+        container_info['ctn'] = str(container_info['ctn'])
+        new_containers_info.append(container_info)
+
+    containers_info = new_containers_info
+
     run_name = "containers_alive"
     containers_metadata_name = f'{run_name}.json'
     containers_metadata_path = os.path.join(path, containers_metadata_name)
@@ -1052,17 +1061,20 @@ def track_containers(containers_info, path, tracker_port=8002):
         with open(containers_metadata_path) as fread:
             containers_info_loaded = json.load(fread)
 
+        logging.info(f"[+] [{containers_metadata_name}] was loaded successfully.")
         # append alive containers with new containers
         containers_info_loaded.extend(containers_info)
 
         #remove duplicates
-        containers_info = [dict(t) for t in {tuple(d.items()) for d in containers_info_loaded}]
+        # containers_info = [dict(t) for t in {tuple(d.items()) for d in containers_info_loaded}]
+        containers_info = [i for n, i in enumerate(containers_info_loaded) if i not in containers_info_loaded[n + 1:]]
 
         with open(containers_metadata_path, 'w') as fout:
             json.dump(containers_info, fout)
 
-    except: # If not, create a new one
-        logging.info(f"[-] Creating new [{run_name}.son].")
+    except Exception as e: # If not, create a new one
+        # logging.error(f"[-]{e}")
+        logging.info(f"[-] Creating new [{containers_metadata_name}].")
         with open(containers_metadata_path, 'w') as fout:
             json.dump(containers_info, fout)
 
@@ -1084,7 +1096,24 @@ def track_containers(containers_info, path, tracker_port=8002):
         # for container_info in containers_info:
         d = {'path': containers_metadata_path,
              'live containers': len(containers_info)}
+
         mlflow.log_params(d)
+
+    for container_info in new_containers_info:
+        with mlflow.start_run(experiment_id=experiment_id,
+                              run_name=f"{container_info['name']}") as mlrun:
+            # for container_info in containers_info:
+            # d = dict()
+            # if container_info['type'] == 'executor':
+            #     d.update({'type': container_info['type'],
+            #               'name': container_info['name'],
+            #               'requirements':container_info['requirements']})
+            #     d.update(container_info['parameters'])
+            # else:
+            #     d.update({'type': container_info['type'],
+            #               'name': container_info['name']})
+
+            mlflow.log_params(container_info)
             # TODO: create a FTP server and put it on a container
             # mlflow.log_dict(container_info, f"{container_info['name']}.json")
 

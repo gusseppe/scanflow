@@ -328,12 +328,15 @@ class Deploy:
                 self.containers_info = self.__start_workflow(wflow_user, **kwargs)
 
                 # cast containers_info: REFACTOR THIS
-                new_containers_info = list()
-                for container_info in self.containers_info:
-                    container_info['ctn'] = str(container_info['ctn'])
-                    new_containers_info.append(container_info)
+                # new_containers_info = list()
+                # for container_info in self.containers_info:
+                #     container_info['ctn'] = str(container_info['ctn'])
+                #     new_containers_info.append(container_info)
 
-                tools.track_containers(new_containers_info, self.paths['meta_dir'])
+                if 'tracker' in wflow_user.keys():
+                    tools.track_containers(containers_info=self.containers_info,
+                                           path=self.paths['meta_dir'],
+                                           tracker_port=wflow_user['tracker']['port'])
                 logging.info(f"[+] Workflow: [{wflow_user['name']}] was started successfully.")
                 # for w in self.workflows:
                 #     if w['name'] == wflow_user['name']:
@@ -415,7 +418,14 @@ class Deploy:
                                                   network=net_name,
                                                   **kwargs)
 
-            containers.append({'name': env_tag_name, 'type':'executor', 'ctn': env_container})
+            # containers.append({'name': env_tag_name, 'type':'executor',
+            #                    'ctn': env_container, 'file': executor['file'],
+            #                    'parameters': executor['parameters'],
+            #                    'requirements': executor['requirements']})
+            d_executor = {'name': env_tag_name, 'type':'executor',
+                          'ctn': env_container}
+            executor.update(d_executor)
+            containers.append(executor)
 
         if 'tracker' in workflow.keys():
             list_containers = []
@@ -924,7 +934,7 @@ class Deploy:
         """
 
 
-        logging.info(f"[+] Running env: [{executor}].")
+        logging.info(f"[+] Running env: [{executor['name']}].")
 
         env_container, result = tools.run_step(executor)
         response = {'name': executor['name'],

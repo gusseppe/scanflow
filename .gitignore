@@ -49,4 +49,4 @@ stuff/
 #examples/demo_mnist_old/
 #examples/demo_mnist/workflow/mnist_c
 #examples/demo_mnist/workflow/mnist
-#examples/demo_mnist/stuff/tracker/mlruns
+examples/demo_mnist/stuff/tracker/mlruns

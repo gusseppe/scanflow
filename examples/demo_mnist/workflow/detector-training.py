@@ -26,7 +26,7 @@ def detector(name, x_train_path):
         
         # ddae_history contains some metrics
         detector, ddae_history = detector_utils.train(x_train, 
-                                                    epochs=3, 
+                                                    epochs=1, 
                                                     batch_size=128,
                                                     model_path='detector.hdf5')
         

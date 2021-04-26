@@ -1,25 +1,25 @@
 version: '3'
 services:
-  training:
-    image: training
-    container_name: training-20210424092518
+  retraining:
+    image: retraining
+    container_name: retraining-20210427010653
     networks:
-    - network-training-mnist
+    - network-retraining-mnist
     depends_on:
-    - tracker-training-mnist
+    - tracker-retraining-mnist
     environment:
-      MLFLOW_TRACKING_URI: http://tracker-training-mnist:8002
+      MLFLOW_TRACKING_URI: http://tracker-retraining-mnist:8002
     volumes:
     - /home/guess/Desktop/scanflow/examples/demo_mnist/:/executor
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-training-mnist:/mlflow
-  tracker-training-mnist:
-    image: tracker-training-mnist
-    container_name: tracker-training-mnist-20210424092518
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
+  tracker-retraining-mnist:
+    image: tracker-retraining-mnist
+    container_name: tracker-retraining-mnist-20210427010653
     networks:
-    - network-training-mnist
+    - network-retraining-mnist
     volumes:
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-training-mnist:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
     ports:
     - 8007:8002
 networks:
-  network_training-mnist: null
+  network_retraining-mnist: null
