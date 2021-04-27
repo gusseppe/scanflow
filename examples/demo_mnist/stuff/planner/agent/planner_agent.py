@@ -103,6 +103,7 @@ async def execute_planner(conclusions: dict):
     with mlflow.start_run(experiment_id=experiment_id,
                           run_name=agent_name) as mlrun:
         mlflow.log_artifact(planner_filename, 'Plan')
+        mlflow.log_params(response['Plan'])
 
     return  response
 

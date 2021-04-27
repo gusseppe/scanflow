@@ -135,7 +135,7 @@ async def execute_improver(feedback: dict):
 
             response = {'conclusions': {
                     "action": f"Retraining the model using the new augmented data={feedback['x_new_train_artifact']}",
-                    "reason":  f"current_metric={new_metric} < new_metric={new_metric}",
+                    "reason":  f"current_metric={old_metric} < new_metric={new_metric}",
                     "planner": result_planner,
                 }
             }
@@ -146,72 +146,13 @@ async def execute_improver(feedback: dict):
                 }
             }
 
-
-
-        # Get the input data from checker
-        # message = Message("", "INFORM", Config.checker_uri)
-        # async with app.aiohttp_session.get(message.receiver) as response:
-        #     result_checker = await response.json(content_type=None)
-        # feedback = result_checker['feedback']
-        # client.download_artifacts(feedback['input_run_id'],
-        #                       feedback['input_path'],
-        #                       '/tmp/')
-        #
-        # input_local_path = os.path.join('/tmp', feedback['input_path'])
-
-        # The retraining begins here
-
-        # Prepare the message
-
-        #call to host server
-        # request = {'app_dir': Config.app_dir,
-        #            'name': 'retraining-mnist', # workflow name
-        #            # 'name': 'retraining-mnist', # workflow name
-        #            'parameters': {'run_id': ''}}
-        # async with app.aiohttp_session.post(Config.host_uri, json=request) as response:
-        #     result_host = await response.json(content_type=None)
-        #
-        # print(result_host)
-
-        # new_model_name = f"{result_tracker['model']['name']}_new"
-        # print(new_model_name)
-        # class AddN(mlflow.pyfunc.PythonModel):
-        #
-        #     def __init__(self, n):
-        #         self.n = n
-        #
-        #     def predict(self, context, model_input):
-        #         return model_input.apply(lambda column: column + self.n)
-        #
-        # new_model = AddN(n=5)
-        #
-        # with mlflow.start_run(experiment_id=experiment_id,
-        #                       run_name=Config.agent_name) as mlrun:
-        #     mlflow.pyfunc.log_model(
-        #         python_model=new_model,
-        #         artifact_path=new_model_name,
-        #         registered_model_name=new_model_name
-        #     )
-        # The retraining ends here
-
-        # Communicate with the Planner
-        # content = {'conclusions': {
-        #                 'order': 'Transition new model to Production.',
-        #                 'current_model_name': result_tracker['model']['name'],
-        #                 'current_model_version': result_tracker['model']['version'],
-        #                 'new_model_name': new_model_name,
-        #             }
-        #           }
-        # message = Message(content, "INFORM", Config.planner_uri)
-        # async with app.aiohttp_session.post(message.receiver, json=content) as response:
-        #     result_planner = await response.json(content_type=None)
-
     with open(Config.improver_filename, 'w') as fout:
         json.dump(response, fout)
 
     with mlflow.start_run(experiment_id=experiment_id,
                           run_name=Config.agent_name) as mlrun:
         mlflow.log_artifact(Config.improver_filename, 'Conclusions')
+        mlflow.log_params(response['conclusions'])
 
     return  response
 
