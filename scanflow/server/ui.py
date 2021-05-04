@@ -149,6 +149,8 @@ def get_conclusion(client):
                 html.H4(f"Action", className="card-title"),
                 html.P(f"{conclusion['action']}", className="card-text"),
                 html.H4(f"Reason", className="card-title"),
+                html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
+                html.H4(f"Result", className="card-title"),
                 html.P(f"{conclusion['reason']}", className="card-text")
             ]
         ),
@@ -187,18 +189,19 @@ def set_cards(client):
             if ctn_type == 'agent':
                 url = f"http://localhost:{container_info['port']}/docs"
                 card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
-                card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+                card = dbc.Col(dbc.Card(card_content, color="light", outline=False), width=4)
                 agent_cards.append(card)
             else: #mlflow
                 url = f"http://localhost:{container_info['port']}"
+                card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
+                card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
 
-            card_content = set_card_content(ctn_type.capitalize(), ctn_name, url)
         else: #executors
             card_content = set_card_content(ctn_type.capitalize(), ctn_name)
-            card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+            card = dbc.Col(dbc.Card(card_content, color="info", outline=True), width=4)
             executor_cards.append(card)
 
-        card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
+        # card = dbc.Col(dbc.Card(card_content, color="success", outline=True), width=4)
         cards.append(card)
 
     rows = layout_rows(cards)

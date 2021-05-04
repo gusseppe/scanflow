@@ -135,3 +135,4 @@ async def get_last_conclusions():
 
     return response
 
+

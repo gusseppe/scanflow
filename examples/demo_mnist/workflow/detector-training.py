@@ -31,8 +31,8 @@ def detector(name, x_train_path):
                                                     model_path='detector.hdf5')
         
         # Later we will support saving on Model Registry, similar as Training step
-#         mlflow.tensorflow.log_model(detector, artifact_path=name, 
-#                                    registered_model_name=name)
+        mlflow.keras.log_model(detector, artifact_path=name, 
+                                   registered_model_name=name)
         
         x_train_path = 'x_train.npy'
         with open(x_train_path, 'wb') as f:

@@ -1,26 +1,26 @@
 version: '3'
 services:
-  inference-batch:
-    image: inference-batch
-    container_name: inference-batch-20210427152521
+  retraining:
+    image: retraining
+    container_name: retraining-20210504144118
     networks:
-    - network-inference-mnist
+    - network-retraining-mnist
     depends_on:
-    - tracker-inference-mnist
+    - tracker-retraining-mnist
     environment:
-      MLFLOW_TRACKING_URI: http://tracker-inference-mnist:8002
+      MLFLOW_TRACKING_URI: http://tracker-retraining-mnist:8002
     volumes:
     - /home/guess/Desktop/scanflow/examples/demo_mnist/:/executor
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-inference-mnist:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
     tty: 'true'
-  tracker-inference-mnist:
-    image: tracker-inference-mnist
-    container_name: tracker-inference-mnist-20210427152521
+  tracker-retraining-mnist:
+    image: tracker-retraining-mnist
+    container_name: tracker-retraining-mnist-20210504144118
     networks:
-    - network-inference-mnist
+    - network-retraining-mnist
     volumes:
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-inference-mnist:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
     ports:
     - 8007:8002
 networks:
-  network_inference-mnist: null
+  network_retraining-mnist: null

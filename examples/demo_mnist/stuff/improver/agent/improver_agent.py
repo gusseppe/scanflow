@@ -92,7 +92,8 @@ async def execute_improver(feedback: dict):
             result_tracker = await response.json(content_type=None)
 
 
-        new_model_name = 'mnist_cnn_new'
+        new_model_name = 'mnist_cnn'
+        # new_model_name = 'mnist_cnn_new'
         scanflow_request = {
             # 'app_dir': Config.app_dir,
             'name': 'retraining-mnist-retraining',

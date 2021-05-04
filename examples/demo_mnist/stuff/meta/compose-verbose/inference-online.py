@@ -9,7 +9,9 @@ import base64
 import json
 import requests
 import torch
+import torchvision.transforms as transforms
 
+from torch.utils.data import DataLoader, Dataset
 from pathlib import Path
 
 @click.command(help="Gather an input data set")
@@ -22,12 +24,11 @@ def inference_online(x_inference_path, host, port):
 
         img_rows, img_cols = 28, 28
         x_inference = np.load(x_inference_path)
-        x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
+#         x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
         
+        x_inference = reshape(x_inference, x_inference.shape[0])
         
         host = f"http://{host}"
-        # Preprocessing
-        x_inference = preprocessing(x_inference)
         
         # Inference
         predictions = predict(x_inference, host, port)
@@ -41,58 +42,24 @@ def inference_online(x_inference_path, host, port):
         with open('y_inference.npy', 'wb') as f:
             np.save(f, predictions)
         mlflow.log_param(key='n_predictions', value=len(df_preds))
-#         input_size = round(Path('x_inference.npy').stat().st_size / (1024), 2)
-#         mlflow.log_param(key='input_size', value=f"{input_size} KB")
+
         print(df_preds.head(10))
 
         mlflow.log_artifact('x_inference.npy')
         mlflow.log_artifact('y_inference.npy')
         mlflow.log_artifact('y_inference.csv')
-       
-    
-def preprocessing(x_inference):
-    kwargs = {'num_workers': 1, 'pin_memory': True}
-    test_batch_size = 1000
-    transform = transforms.Compose([
-                            transforms.ToTensor(),
-                            transforms.Normalize((0.1307,), (0.3081,))
-                        ])
-
-    x_data_loader = get_dataloader_x(x_inference, test_batch_size,
-                                transform, kwargs)
-  
-    return x_data_loader
-
-#         for data in test_loader:
-#             data = data.to(device)
+        
+def reshape(x, n):
+    x = x.reshape((n, 28 * 28))
+    return x.astype('float32') / 255
 
 def predict(x_inference, host, port):
-#     if os.path.isdir(path):
-#         filenames = [
-#             os.path.join(path, x) for x in os.listdir(path) if os.path.isfile(os.path.join(path, x))
-#         ]
-#     else:
-#         filenames = [path]
 
-#     def read_image(x):
-#         with open(x, "rb") as f:
-#             return f.read()
-#     data = pd.DataFrame(
-#         data=[base64.encodebytes(np.load(x)) for x in filenames], columns=["image"]
-#     ).to_json(orient="split")
-#     img_rows, img_cols = 28, 28
-#     x_inference = np.load(path)
-#     x_inference = x_inference[0] # Only one value
+#     x_inference = torch.Tensor(x_inference)
     
-#     x_inference = x_inference.reshape(img_rows, img_rows)
-    
-    
-    print(x_inference.shape)
-    
-#     data = pd.DataFrame(
-#         data=[x for x in x_inference], columns=["instances"]
-#     ).to_json(orient="split")
-    data = json.dumps({"instances": x_inference[0:3].tolist()})
+#     print(x_inference.shape)
+    data = json.dumps({"instances": x_inference.tolist()})
+#     data = json.dumps({"instances": x_inference.tolist()})
 
     response = requests.post(
         url="{host}:{port}/invocations".format(host=host, port=port),
@@ -100,8 +67,9 @@ def predict(x_inference, host, port):
         headers={"Content-Type": "application/json"},
 #         headers={"Content-Type": "application/json; format=pandas-split"},
     )
-    predictions = json.loads(response.text)['predictions']
-    print(predictions)
+    print(response.text)
+#     predictions = json.loads(response.text)['predictions']
+#     print(predictions)
     if response.status_code != 200:
         raise Exception(
             "Status Code {status_code}. {text}".format(
@@ -111,6 +79,8 @@ def predict(x_inference, host, port):
         
     print(response)
     return response
+
+
 
 if __name__ == '__main__':
     inference_online()

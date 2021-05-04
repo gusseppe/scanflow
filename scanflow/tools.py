@@ -261,7 +261,8 @@ def compose_template_swarm(paths, workflows):
     return compose_dic, main_file
 
 
-def generate_dockerfile(folder, dock_type='executor', executor=None, port=None, model=None, version=None):
+def generate_dockerfile(folder, dock_type='executor', executor=None,
+                        port=None, model=None, image=None, version=None):
     # if len(dockerfile) == 0:
     dockerfile = None
     filename = ''
@@ -287,7 +288,8 @@ def generate_dockerfile(folder, dock_type='executor', executor=None, port=None, 
         dockerfile = dockerfile_template_planner_agent(port)
         filename = f"Dockerfile_planner_agent_{executor['name']}"
     elif dock_type == 'predictor':
-        dockerfile = dockerfile_template_predictor(port, model, version)
+        dockerfile = dockerfile_template_predictor(image, port, model, version)
+        logging.info(f'[+] Generating predictor: [{model}/{version}].')
         filename = f"Dockerfile_predictor_{model}"
 
     dockerfile_path = os.path.join(folder, filename)
@@ -510,24 +512,23 @@ def dockerfile_template_planner_agent(port=8005):
     ''')
     return template
 
-def dockerfile_template_predictor(port=8010, model="mnist_cnn", version=1):
-    base_image = 'continuumio/miniconda3'
+def dockerfile_template_predictor(image, port=8010, model="mnist_cnn", version=1):
+    base_image = image
+    # base_image = 'continuumio/miniconda3'
+    # RUN chmod -R 777 /opt/conda/
+    # ENV PREDICTOR_HOME  /{user}
+    # RUN useradd -m -d /{user} {user}
+    # RUN mkdir -p $PREDICTOR_HOME
+    # RUN chown -R {user} /{user}
+    # USER {user}
+    # WORKDIR $PREDICTOR_HOME
     user = 'predictor'
     template = dedent(f'''
                 FROM {base_image}
                 LABEL maintainer='scanflow'
 
-                RUN pip install mlflow==1.14.1
-                RUN chmod -R 777 /opt/conda/
-
                 ENV PREDICTOR_PORT  {port}
-                ENV PREDICTOR_HOME  /{user}
-                RUN useradd -m -d /{user} {user}
-                RUN mkdir -p $PREDICTOR_HOME
-                RUN chown -R {user} /{user}
-                USER {user}
-                WORKDIR $PREDICTOR_HOME
-                CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT
+                CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT --no-conda
 
     ''')
     return template
@@ -1048,7 +1049,7 @@ def track_containers(containers_info, path, tracker_port=8002):
     # Cast container info to string
     new_containers_info = list()
     for container_info in containers_info:
-        container_info['ctn'] = str(container_info['ctn'])
+        # container_info['ctn'] = str(container_info['ctn'])
         new_containers_info.append(container_info)
 
     containers_info = new_containers_info

@@ -8,4 +8,4 @@ flavors:
   pytorch:
     model_data: data
     pytorch_version: 1.8.0
-utc_time_created: '2021-04-27 12:36:49.612226'
+utc_time_created: '2021-05-04 10:10:32.496213'

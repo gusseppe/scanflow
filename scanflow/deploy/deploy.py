@@ -290,6 +290,7 @@ class Deploy:
 
                 # if workflow['predictor']['mode'] == 'online':
                 model = workflow['predictor']['model']
+                image = workflow['predictor']['image']
                 version = workflow['predictor']['version']
                 port_agent = workflow['predictor']['port']
                 dockerfile_agent_path = tools.generate_dockerfile(folder=meta_compose_dir,
@@ -297,9 +298,10 @@ class Deploy:
                                                                   executor=workflow,
                                                                   port=port_agent,
                                                                   model=model,
+                                                                  image=image,
                                                                   version=version)
 
-                predictor_image_name = f"{workflow['name']}-predictor"
+                predictor_image_name = f"{workflow['name']}-predictor-online"
                 predictor_dir = os.path.join(self.paths['predictor_dir'], predictor_image_name )
                 metadata = tools.build_image(predictor_image_name, meta_compose_dir,
                                              dockerfile_agent_path, 'predictor', port_agent, predictor_dir)
@@ -325,7 +327,7 @@ class Deploy:
         if self.workflows_user is not None:
             for wflow_user in tqdm(self.workflows_user):
                 logging.info(f"[++] Starting workflow: [{wflow_user['name']}].")
-                self.containers_info = self.__start_workflow(wflow_user, **kwargs)
+                self.containers_info = self.__start_workflow(wflow_user.copy(), **kwargs)
 
                 # cast containers_info: REFACTOR THIS
                 # new_containers_info = list()
@@ -422,10 +424,12 @@ class Deploy:
             #                    'ctn': env_container, 'file': executor['file'],
             #                    'parameters': executor['parameters'],
             #                    'requirements': executor['requirements']})
-            d_executor = {'name': env_tag_name, 'type':'executor',
-                          'ctn': env_container}
-            executor.update(d_executor)
-            containers.append(executor)
+            d_executor = {'name': env_tag_name, 'type':'executor'}
+            # d_executor = {'name': env_tag_name, 'type':'executor',
+            #               'ctn': env_container}
+            t_executor = executor.copy()
+            t_executor.update(d_executor)
+            containers.append(t_executor)
 
         if 'tracker' in workflow.keys():
             list_containers = []
@@ -462,7 +466,9 @@ class Deploy:
                                                   **kwargs)
 
             tracker_container = {'name': tracker_image_name, 'type':'tracker',
-                                 'ctn': tracker_container, 'port': workflow['tracker']['port']}
+                                 'port': workflow['tracker']['port']}
+            # tracker_container = {'name': tracker_image_name, 'type':'tracker',
+            #                      'ctn': tracker_container, 'port': workflow['tracker']['port']}
 
             list_containers.append(tracker_container)
 
@@ -486,7 +492,9 @@ class Deploy:
 
 
                 tracker_agent_container = {'name': tracker_image_agent_name, 'type':'agent',
-                                     'ctn': tracker_agent_container, 'port': port_agent}
+                                     'port': port_agent}
+                # tracker_agent_container = {'name': tracker_image_agent_name, 'type':'agent',
+                #                            'ctn': tracker_agent_container, 'port': port_agent}
                 list_containers.append(tracker_agent_container)
 
 
@@ -552,7 +560,9 @@ class Deploy:
                                                                 **kwargs)
 
                     checker_agent_container = {'name': checker_image_agent_name, 'type':'agent',
-                                               'ctn': checker_agent_container, 'port': port_agent}
+                                               'port': port_agent}
+                    # checker_agent_container = {'name': checker_image_agent_name, 'type':'agent',
+                    #                            'ctn': checker_agent_container, 'port': port_agent}
                     list_containers.append(checker_agent_container)
 
             if 'improver' in workflow.keys():
@@ -607,7 +617,9 @@ class Deploy:
                                                                 **kwargs)
 
                     improver_agent_container = {'name': improver_image_agent_name, 'type':'agent',
-                                               'ctn': improver_agent_container, 'port': port_agent}
+                                               'port': port_agent}
+                    # improver_agent_container = {'name': improver_image_agent_name, 'type':'agent',
+                    #                             'ctn': improver_agent_container, 'port': port_agent}
                     list_containers.append(improver_agent_container)
 
             if 'planner' in workflow.keys():
@@ -660,7 +672,9 @@ class Deploy:
                                                                  **kwargs)
 
                     planner_agent_container = {'name': planner_image_agent_name, 'type':'agent',
-                                                'ctn': planner_agent_container, 'port': port_agent}
+                                                 'port': port_agent}
+                    # planner_agent_container = {'name': planner_image_agent_name, 'type':'agent',
+                    #                            'ctn': planner_agent_container, 'port': port_agent}
                     list_containers.append(planner_agent_container)
 
             if 'predictor' in workflow.keys():
@@ -702,8 +716,8 @@ class Deploy:
                 # workflow_predictor_dir_agent = os.path.join(workflow_predictor_dir, "agent" )
                 volumes = {workflow_predictor_dir: {'bind': container_path, 'mode': 'rw'}}
                 kwargs['volumes'].update(volumes)
-                predictor_image_name = f"{workflow['name']}-predictor"
-                predictor_tag_name = f"{workflow['name']}-predictor"
+                predictor_image_name = f"{workflow['name']}-predictor-online"
+                predictor_tag_name = f"{workflow['name']}-predictor-online"
                 port = workflow['predictor']['port']
                 ports = {f"{port}/tcp": port}
                 kwargs['ports'] = ports
@@ -714,7 +728,9 @@ class Deploy:
                                                             **kwargs)
 
                 predictor_container = {'name': predictor_image_name, 'type':'predictor',
-                                           'ctn': predictor_container, 'port': port}
+                                            'port': port}
+                # predictor_container = {'name': predictor_image_name, 'type':'predictor',
+                #                        'ctn': predictor_container, 'port': port}
                 list_containers.append(predictor_container)
 
             containers.extend(list_containers)
@@ -837,7 +853,7 @@ class Deploy:
             if 'predictor' in workflow.keys():
 
                 # if workflow['tracker']['mode'] == 'online':
-                predictor_image_name = f"{workflow['name']}-predictor"
+                predictor_image_name = f"{workflow['name']}-predictor-online"
                 try:
                     container_from_env = client.containers.get(predictor_image_name)
                     container_from_env.stop()

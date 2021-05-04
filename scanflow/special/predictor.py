@@ -11,12 +11,14 @@ class Node(object):
 class Predictor(Node):
 
     def __init__(self,
-                 name:str = None,
+                 image,
                  model='mnist',
                  version='1',
+                 name:str = None,
                  port:int = 8010):
 
         super(Predictor, self).__init__(name=name)
+        self.image = image
         self.model = model
         self.version = version
         self.port = self.choose_port(port)

@@ -5,14 +5,14 @@ import imageio
 import json
 import glob
 import gradio as gr
-from zipfile import ZipFile
 import requests
-
 
 import sys
 sys.path.insert(0,'../..')
-from scanflow import tools
-from scanflow.deploy import Deploy
+
+model_name = sys.argv[1]
+# model_version = int(sys.argv[2])
+
 
 base_path = os.path.dirname(os.path.dirname(os.getcwd()))
 app_dir = os.path.join(base_path, "examples/demo_mnist/")
@@ -22,7 +22,8 @@ app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
 filename = 'x_inference_dashboard.npy'
 
 content = {'name': 'inference-mnist-inference-batch',
-          'parameters':{'model_name':'mnist_cnn', 'model_version':1,
+          'parameters':{'model_name':model_name, 
+                        'model_stage':"Production",
                         'x_inference_path': filename}}
     
 def inference(x_inference):
