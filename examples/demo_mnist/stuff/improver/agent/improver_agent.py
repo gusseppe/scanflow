@@ -81,9 +81,11 @@ async def execute_improver(feedback: dict):
     n_anomalies = feedback['n_anomalies']
     p_anomalies = feedback['percentage_anomalies']
 
-    if p_anomalies <= 0.05:
+    threshold_low = 0.05
+    threshold_hig = 0.1
+    if p_anomalies <= threshold_low:
         response = {'conclusions': f'Normal behavior!, {p_anomalies}% anomalies'}
-    elif 0.05 < p_anomalies < 0.1:
+    elif threshold_low < p_anomalies < threshold_hig:
         response = {'conclusions': f'Alert!, {p_anomalies}% anomalies'}
     else:
         # Get the current model from tracker
@@ -136,15 +138,16 @@ async def execute_improver(feedback: dict):
                 result_planner = await response.json(content_type=None)
 
             response = {'conclusions': {
-                    "action": f"Retraining the model using the new augmented data={feedback['x_new_train_artifact']}",
-                    "reason":  f"current_metric={old_metric} < new_metric={new_metric}",
+                    "action": f"Retraining was performed (p_anomalies > {threshold_hig}) and Planner is triggered.",
+                # "action": f"Retraining was performed using the new augmented data={feedback['x_new_train_artifact']}",
+                    "result":  f"current_metric={old_metric} < new_metric={new_metric}",
                     "planner": result_planner,
                 }
             }
         else:
             response = {'conclusions': {
-                    "action": f'No retraining triggered',
-                    "reason":  f"current_metric={new_metric} > new_metric={new_metric}"
+                    "action": f'Retraining was performed (p_anomalies > {threshold_hig}) Planner was not triggered.',
+                    "result":  f"current_metric={new_metric} >= new_metric={new_metric}"
                 }
             }
 

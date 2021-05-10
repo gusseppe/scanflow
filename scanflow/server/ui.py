@@ -145,22 +145,27 @@ def get_conclusion(client):
         #     ###### **Reason**: {conclusion['reason']}
         # ''')
 
-        card_content = [
-            html.B(dbc.CardHeader(f"Last explanation : Improver")),
-            dbc.CardBody(
-                [
+        try:
+            card_content = [
+                html.B(dbc.CardHeader(f"Last explanation : Improver")),
+                    dbc.CardBody(
+                        [
 
-                    html.H4(f"Action", className="card-title"),
-                    html.P(f"{conclusion['action']}", className="card-text"),
-                    html.H4(f"Reason", className="card-title"),
-                    html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
-                    html.H4(f"Result", className="card-title"),
-                    html.P(f"{conclusion['reason']}", className="card-text")
-                ]
-            ),
-        ]
-        card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
-                       width=5)
+                            html.H4(f"Action", className="card-title"),
+                            html.P(f"{conclusion['action']}", className="card-text"),
+
+                            # html.H4(f"Reason", className="card-title"),
+                            # html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
+
+                            html.H4(f"Result", className="card-title"),
+                            html.P(f"{conclusion['result']}", className="card-text")
+                        ]
+                    ),
+            ]
+            card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
+                           width=5)
+        except:
+            return None
     else:
         return None
 
