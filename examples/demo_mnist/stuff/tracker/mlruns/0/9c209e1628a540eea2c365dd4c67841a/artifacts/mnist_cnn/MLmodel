@@ -1,0 +1,18 @@
+artifact_path: mnist_cnn
+flavors:
+  python_function:
+    data: data
+    env: conda.yaml
+    loader_module: mlflow.pytorch
+    pickle_module_name: mlflow.pytorch.pickle_module
+    python_version: 3.7.10
+  pytorch:
+    model_data: data
+    pytorch_version: 1.8.0
+run_id: 9c209e1628a540eea2c365dd4c67841a
+signature:
+  inputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float32", "shape": [-1, 28,
+    28]}}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "float32", "shape": [-1,
+    10]}}]'
+utc_time_created: '2021-05-07 09:24:01.966691'
