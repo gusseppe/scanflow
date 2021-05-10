@@ -91,6 +91,9 @@ def get_app_fastapi(client, mas_port):
     async def run_executor(content: dict, background_task: BackgroundTasks):
         # background_task.add_task(trigger_mas2, client, mas_port)
         # example = ThreadingExample(client, mas_port)
+        if 'inference-mnist-inference' in content['name']:
+            background_task.add_task(trigger_mas, client, mas_port)
+
 
         experiment = client.get_experiment_by_name("Scanflow")
         experiment_id = experiment.experiment_id

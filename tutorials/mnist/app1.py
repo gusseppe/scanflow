@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0,'../..')
 
 model_name = sys.argv[1]
-# model_version = int(sys.argv[2])
+model_version = int(sys.argv[2])
 
 
 base_path = os.path.dirname(os.path.dirname(os.getcwd()))
@@ -21,9 +21,10 @@ scanflow_uri = 'http://localhost:8050/run/executor'
 app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
 filename = 'x_inference_dashboard.npy'
 
-content = {'name': 'inference-mnist-inference-batch',
+content = {'name': 'inference-mnist-inference',
           'parameters':{'model_name':model_name, 
-                        'model_stage':"Production",
+                        'model_version': model_version,
+#                         'model_stage':"Production",
                         'x_inference_path': filename}}
     
 def inference(x_inference):
