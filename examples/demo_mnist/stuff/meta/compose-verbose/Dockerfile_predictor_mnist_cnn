@@ -1,7 +1,0 @@
-
-FROM training-mnist-training
-LABEL maintainer='scanflow'
-
-ENV PREDICTOR_PORT  8010
-CMD mlflow models serve -m "models:/mnist_cnn/1" --host 0.0.0.0 --port $PREDICTOR_PORT --no-conda
-

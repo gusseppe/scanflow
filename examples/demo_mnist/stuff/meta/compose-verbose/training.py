@@ -54,7 +54,10 @@ def training(model_name, x_train_path, y_train_path,
 
 
         model = MNIST()
-        trainer = pl.Trainer(max_epochs=epochs, progress_bar_refresh_rate=20)
+        trainer = pl.Trainer(max_epochs=epochs, 
+                             progress_bar_refresh_rate=20,
+                             deterministic=True,
+                             checkpoint_callback=False, logger=False)
         trainer.fit(model, train_dataloader=loaders_train.train_dataloader(), 
                     val_dataloaders=loaders_train.val_dataloader())
 
@@ -63,7 +66,7 @@ def training(model_name, x_train_path, y_train_path,
         predictions = predict(model, x_test)
         
         input_schema = Schema([
-          TensorSpec(np.dtype(np.float32), (-1, 28, 28)),
+          TensorSpec(np.dtype(np.float32), (-1, img_rows, img_cols)),
         ])
         output_schema = Schema([TensorSpec(np.dtype(np.float32), (-1, 10))])
         signature = ModelSignature(inputs=input_schema, outputs=output_schema)

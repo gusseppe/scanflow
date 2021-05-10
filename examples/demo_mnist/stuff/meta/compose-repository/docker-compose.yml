@@ -2,7 +2,7 @@ version: '3'
 services:
   retraining:
     image: retraining
-    container_name: retraining-20210504144118
+    container_name: retraining-20210510103741
     networks:
     - network-retraining-mnist
     depends_on:
@@ -15,7 +15,7 @@ services:
     tty: 'true'
   tracker-retraining-mnist:
     image: tracker-retraining-mnist
-    container_name: tracker-retraining-mnist-20210504144118
+    container_name: tracker-retraining-mnist-20210510103741
     networks:
     - network-retraining-mnist
     volumes:

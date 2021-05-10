@@ -89,26 +89,29 @@ def get_plan(client):
                                    order_by=["attribute.start_time DESC"],
                                    max_results=1)
 
-    response = runs_info[0].data.params
+    if runs_info:
+        response = runs_info[0].data.params
 
-    card_content = [
-        html.B(dbc.CardHeader(f"Last explanation : {agent_name}")),
-        dbc.CardBody(
-            [
+        card_content = [
+            html.B(dbc.CardHeader(f"Last explanation : {agent_name}")),
+            dbc.CardBody(
+                [
 
-                html.H5(f"Order", className="card-title"),
-                html.P(f"{response['order']}", className="card-text"),
-                html.H5(f"Current model", className="card-title"),
-                html.P(f"{response['current_model_name']}/{response['current_model_version']}", className="card-text"),
-                html.H5(f"New model", className="card-title"),
-                html.P(f"{response['new_model_name']}/{response['new_model_version']}", className="card-text"),
-                html.H5(f"Result", className="card-title"),
-                html.P(f"{response['result']}", className="card-text")
-            ]
-        ),
-    ]
-    card = dbc.Col(dbc.Card(card_content, color="primary", inverse=True),
-                   width=5)
+                    html.H5(f"Order", className="card-title"),
+                    html.P(f"{response['order']}", className="card-text"),
+                    html.H5(f"Current model", className="card-title"),
+                    html.P(f"{response['current_model_name']}/{response['current_model_version']}", className="card-text"),
+                    html.H5(f"New model", className="card-title"),
+                    html.P(f"{response['new_model_name']}/{response['new_model_version']}", className="card-text"),
+                    html.H5(f"Result", className="card-title"),
+                    html.P(f"{response['result']}", className="card-text")
+                ]
+            ),
+        ]
+        card = dbc.Col(dbc.Card(card_content, color="primary", inverse=True),
+                       width=5)
+    else:
+        return None
     # row = dbc.Row(
     #     card,
     #     className="mb-4",
@@ -134,33 +137,32 @@ def get_conclusion(client):
                                    order_by=["attribute.start_time DESC"],
                                    max_results=1)
 
-    conclusion = runs_info[0].data.params
-    # explain = dedent(f'''
-    #     ### Explanation: Improver
-    #     ###### **Action**: {conclusion['action']}
-    #     ###### **Reason**: {conclusion['reason']}
-    # ''')
+    if runs_info:
+        conclusion = runs_info[0].data.params
+        # explain = dedent(f'''
+        #     ### Explanation: Improver
+        #     ###### **Action**: {conclusion['action']}
+        #     ###### **Reason**: {conclusion['reason']}
+        # ''')
 
-    card_content = [
-        html.B(dbc.CardHeader(f"Last explanation : Improver")),
-        dbc.CardBody(
-            [
+        card_content = [
+            html.B(dbc.CardHeader(f"Last explanation : Improver")),
+            dbc.CardBody(
+                [
 
-                html.H4(f"Action", className="card-title"),
-                html.P(f"{conclusion['action']}", className="card-text"),
-                html.H4(f"Reason", className="card-title"),
-                html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
-                html.H4(f"Result", className="card-title"),
-                html.P(f"{conclusion['reason']}", className="card-text")
-            ]
-        ),
-    ]
-    card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
-                   width=5)
-    # row = dbc.Row(
-    #     card,
-    #     className="mb-4",
-    # )
+                    html.H4(f"Action", className="card-title"),
+                    html.P(f"{conclusion['action']}", className="card-text"),
+                    html.H4(f"Reason", className="card-title"),
+                    html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
+                    html.H4(f"Result", className="card-title"),
+                    html.P(f"{conclusion['reason']}", className="card-text")
+                ]
+            ),
+        ]
+        card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
+                       width=5)
+    else:
+        return None
 
     return card
 

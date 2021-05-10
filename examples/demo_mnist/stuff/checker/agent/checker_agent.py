@@ -1,5 +1,5 @@
-
 import uvicorn
+import agent
 import numpy as np
 import os
 import mlflow
@@ -24,8 +24,12 @@ client = MlflowClient()
 
 class Config():
     agent_name = 'Checker'
-    app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
-    host_uri = 'http://192.168.96.1:8050/run/executor'
+
+    app_dir = agent.get_app_dir()
+    # app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
+    host_uri = agent.get_host_uri()
+    host_uri = f"{host_uri}/run/executor"
+    # host_uri = 'http://192.168.96.1:8050/run/executor'
     # host_uri = 'http://192.168.96.1:8050/run/workflow'
 
 experiment = client.get_experiment_by_name(agent_name)

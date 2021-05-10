@@ -1,6 +1,3 @@
-
-import uvicorn
-import numpy as np
 import os
 import mlflow
 import json
@@ -9,8 +6,6 @@ import aiohttp
 import logging
 
 from mlflow.tracking import MlflowClient
-from mlflow.exceptions import  MlflowException
-from typing import Optional, List, Dict
 
 from fastapi import FastAPI, Response, Request, UploadFile
 from pydantic import BaseModel, HttpUrl
@@ -18,7 +13,6 @@ from pydantic import BaseModel, HttpUrl
 logging.basicConfig(format='%(asctime)s -  %(levelname)s - %(message)s',
                     datefmt='%d-%b-%y %H:%M:%S')
 logging.getLogger().setLevel(logging.INFO)
-
 
 agent_name = 'Planner'
 # consider put this into startup fastapi function

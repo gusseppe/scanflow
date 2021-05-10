@@ -20,11 +20,11 @@ class Checker(Node, Agent):
 
     def __init__(self,
                  name:str = None,
-                 mode='offline',
+                 # mode='offline',
                  port:int = 8004):
 
         super(Checker, self).__init__(name=name)
-        self.mode = mode
+        # self.mode = mode
         self.port = self.choose_port(port)
         self._to_dict = locals()
 

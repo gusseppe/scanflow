@@ -11,16 +11,20 @@ class Node(object):
 class Predictor(Node):
 
     def __init__(self,
-                 image,
-                 model='mnist',
-                 version='1',
-                 name:str = None,
+                 image:str,
+                 file:str,
+                 function:str,
+                 # model:str,
+                 name:str = 'predictor',
+                 # version:int = 1,
+                 # stage:str ='Production',
                  port:int = 8010):
 
         super(Predictor, self).__init__(name=name)
         self.image = image
-        self.model = model
-        self.version = version
+        self.function = function
+        # self.model = model
+        # self.version = version
         self.port = self.choose_port(port)
         self._to_dict = locals()
 

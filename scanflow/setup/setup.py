@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from scanflow import tools
 
 from scanflow.special.tracker import Tracker
+from scanflow.special.supervisor import Supervisor
 from scanflow.special.checker import Checker
 from scanflow.special.improver import Improver
 from scanflow.special.planner import Planner
@@ -243,14 +244,14 @@ class Executor(Node):
                  parameters: dict = None,
                  requirements: str = None,
                  dockerfile: str = None,
-                 env: str = None):
+                 image: str = None):
 
         super(Executor, self).__init__(name=name)
         self.file = file
         self.parameters = parameters
         self.requirements = requirements
         self.dockerfile = dockerfile
-        self.env = env
+        self.image = image
         self._to_dict = locals()
 
     @property
@@ -278,8 +279,8 @@ class Workflow(object):
     def __init__(self,
                  name: str = None,
                  executors: List[Executor] = None,
-                 # mode: str = "offline",
                  tracker: Tracker = None,
+                 supervisor: Supervisor = None,
                  checker: Checker = None,
                  improver: Improver = None,
                  planner: Planner = None,
@@ -289,6 +290,7 @@ class Workflow(object):
         self.name = name
         self._executors = executors
         self._tracker = tracker
+        self._supervisor = supervisor
         self._checker = checker
         self._improver = improver
         self._planner = planner
@@ -319,6 +321,15 @@ class Workflow(object):
             raise TypeError('The added tracker must be '
                             'an instance of class Tracker. '
                             'Found: ' + str(self._tracker[0]))
+
+    @property
+    def supervisor(self):
+        if self._supervisor and isinstance(self._supervisor, Tracker):
+            return self._supervisor
+        else:
+            raise TypeError('The added supervisor must be '
+                            'an instance of class Supervisor. '
+                            'Found: ' + str(self._supervisor[0]))
 
     @property
     def checker(self):
@@ -365,6 +376,8 @@ class Workflow(object):
                 for executor in v:
                     executors_list.append(executor.to_dict)
             if k == 'tracker':
+                tmp_dict[k] = v.to_dict
+            if k == 'supervisor':
                 tmp_dict[k] = v.to_dict
             if k == 'checker':
                 tmp_dict[k] = v.to_dict

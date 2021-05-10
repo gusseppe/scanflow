@@ -261,8 +261,9 @@ def compose_template_swarm(paths, workflows):
     return compose_dic, main_file
 
 
-def generate_dockerfile(folder, dock_type='executor', executor=None,
-                        port=None, model=None, image=None, version=None):
+def generate_dockerfile(folder, dock_type='executor',
+                        executor=None,
+                        workflow=None):
     # if len(dockerfile) == 0:
     dockerfile = None
     filename = ''
@@ -270,27 +271,31 @@ def generate_dockerfile(folder, dock_type='executor', executor=None,
         dockerfile = dockerfile_template_executor(executor)
         filename = f"Dockerfile_{executor['name']}"
     elif dock_type == 'tracker':
-        dockerfile = dockerfile_template_tracker(port)
-        filename = f"Dockerfile_tracker_{executor['name']}"
-    elif dock_type == 'tracker_agent':
-        dockerfile = dockerfile_template_tracker_agent(port)
-        filename = f"Dockerfile_tracker_agent_{executor['name']}"
-    elif dock_type == 'checker':
-        dockerfile = dockerfile_template_checker(port)
-        filename = f"Dockerfile_checker_{executor['name']}"
+        dockerfile = dockerfile_template_tracker(workflow['tracker']['port'])
+        filename = f"Dockerfile_tracker"
+        # filename = f"Dockerfile_tracker_{executor['name']}"
+    elif dock_type == 'supervisor_agent':
+        dockerfile = dockerfile_template_supervisor_agent(workflow['supervisor']['port'])
+        filename = f"Dockerfile_supervisor_agent_{workflow['name']}"
+    # elif dock_type == 'checker':
+    #     dockerfile = dockerfile_template_checker(port)
+    #     filename = f"Dockerfile_checker_{workflow['name']}"
     elif dock_type == 'checker_agent':
-        dockerfile = dockerfile_template_checker_agent(port)
-        filename = f"Dockerfile_checker_agent_{executor['name']}"
+        dockerfile = dockerfile_template_checker_agent(workflow['checker']['port'])
+        filename = f"Dockerfile_checker_agent_{workflow['name']}"
     elif dock_type == 'improver_agent':
-        dockerfile = dockerfile_template_improver_agent(port)
-        filename = f"Dockerfile_improver_agent_{executor['name']}"
+        dockerfile = dockerfile_template_improver_agent(workflow['improver']['port'])
+        filename = f"Dockerfile_improver_agent_{workflow['name']}"
     elif dock_type == 'planner_agent':
-        dockerfile = dockerfile_template_planner_agent(port)
-        filename = f"Dockerfile_planner_agent_{executor['name']}"
-    elif dock_type == 'predictor':
-        dockerfile = dockerfile_template_predictor(image, port, model, version)
-        logging.info(f'[+] Generating predictor: [{model}/{version}].')
-        filename = f"Dockerfile_predictor_{model}"
+        dockerfile = dockerfile_template_planner_agent(workflow['planner']['port'])
+        filename = f"Dockerfile_planner_agent_{workflow['name']}"
+    elif dock_type == 'predictor_ui':
+        dockerfile = dockerfile_template_predictor_ui(workflow['predictor'])
+        filename = f"Dockerfile_predictor_ui_{workflow['name']}"
+    elif dock_type == 'predictor_api':
+        dockerfile = dockerfile_template_predictor_api(workflow['predictor'])
+        # logging.info(f'[+] Generating predictor: [{model}/{version}].')
+        filename = f"Dockerfile_predictor_api_{workflow['name']}"
 
     dockerfile_path = os.path.join(folder, filename)
     with open(dockerfile_path, 'w') as f:
@@ -304,73 +309,117 @@ def generate_dockerfile(folder, dock_type='executor', executor=None,
     # return None
 
 
-def dockerfile_template_executor(executor):
-    base_image = 'continuumio/miniconda3'
-    user = 'executor'
+# def dockerfile_template_executor(executor):
+#     base_image = 'continuumio/miniconda3'
+#     user = 'executor'
+#     template = dedent(f'''
+#                 FROM {base_image}
+#                 LABEL maintainer='scanflow'
+#
+#                 COPY {executor['requirements']} {executor['requirements']}
+#                 RUN pip install -r {executor['requirements']}
+#
+#                 RUN useradd -m -d /{user} {user}
+#                 RUN chown -R {user} /{user}
+#                 USER {user}
+#                 WORKDIR /{user}
+#
+#     ''')
+#     return template
+#     template = dedent(f'''
+#                 FROM {base_image}
+#                 LABEL maintainer={maintainer}
+#
+#                 RUN useradd --create-home --shell /bin/bash {user}
+#                 WORKDIR /home/{user}
+#                 USER {user}
+#
+#                 RUN conda create -y --name {condaenv} python=3.7
+#                 RUN echo "source activate {condaenv}" > ~/.bashrc
+#                 SHELL ["conda", "run", "--no-capture-output","-n", "{condaenv}", "/bin/bash", "-c"]
+#
+#                 ENV PATH /home/dev/.conda/envs/{condaenv}/bin:$PATH
+#                 RUN pip install mlflow==1.16.0
+#     ''')
+#     return template
+def dockerfile_template_base():
+    # base_image = 'continuumio/miniconda3:4.6.14'
+    base_image = 'continuumio/miniconda3:latest'
+    maintainer = 'scanflow'
+    user = 'dev'
+    # condaenv = "env"
+
     template = dedent(f'''
                 FROM {base_image}
-                LABEL maintainer='scanflow'
+                LABEL maintainer={maintainer}
 
-                COPY {executor['requirements']} {executor['requirements']}
-                RUN pip install -r {executor['requirements']}
-
-                RUN useradd -m -d /{user} {user}
-                RUN chown -R {user} /{user}
+                RUN useradd --create-home --shell /bin/bash {user}
+                WORKDIR /home/{user}
+                RUN chown -R {user}: /opt/conda
                 USER {user}
-                WORKDIR /{user}
 
+                RUN pip install mlflow==1.16.0
     ''')
     return template
 
+def dockerfile_template_executor(executor):
+
+    base_template = dockerfile_template_base()
+    home = '/home/dev/executor'
+    template = dedent(f'''
+                RUN mkdir -p {home}
+                COPY {executor['requirements']} {executor['requirements']}
+                RUN pip install -r {executor['requirements']}
+                RUN echo "Executor = {executor['name']} was built successfully."
+    ''')
+
+    template = base_template + template
+
+    return template
 
 def dockerfile_template_tracker(port=8002):
-    base_image = 'continuumio/miniconda3'
-    user = 'mlflow'
+    base_template = dockerfile_template_base()
+    home = '/home/dev/mlflow'
     template = dedent(f'''
-                FROM {base_image}
-                LABEL maintainer='scanflow'
-
-                ENV MLFLOW_HOME  /{user}
                 ENV MLFLOW_HOST  0.0.0.0
                 ENV MLFLOW_PORT  {port}
-                ENV MLFLOW_BACKEND  sqlite:////{user}/backend.sqlite
-                ENV MLFLOW_ARTIFACT  /{user}/mlruns
+                ENV MLFLOW_BACKEND  sqlite:///{home}/backend.sqlite
+                ENV MLFLOW_ARTIFACT  {home}/mlruns
 
-                RUN pip install mlflow==1.14.1
-
-                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p {home}
                 RUN mkdir -p $MLFLOW_ARTIFACT
-                RUN chown -R {user} /{user}
-                USER {user}
-                WORKDIR /{user}
-
-                WORKDIR $MLFLOW_HOME
 
                 CMD mlflow server  \
                 --backend-store-uri $MLFLOW_BACKEND \
                 --default-artifact-root $MLFLOW_ARTIFACT \
                 --host $MLFLOW_HOST -p $MLFLOW_PORT
-
     ''')
+
+    template = base_template + template
+
     return template
 
 # def dockerfile_template_tracker(port=8002):
 #     base_image = 'continuumio/miniconda3'
-#     user = 'tracker'
+#     user = 'mlflow'
 #     template = dedent(f'''
 #                 FROM {base_image}
 #                 LABEL maintainer='scanflow'
 #
-#                 ENV MLFLOW_HOME  /mlflow
+#                 ENV MLFLOW_HOME  /{user}
 #                 ENV MLFLOW_HOST  0.0.0.0
 #                 ENV MLFLOW_PORT  {port}
-#                 ENV MLFLOW_BACKEND  sqlite:////mlflow/backend.sqlite
-#                 ENV MLFLOW_ARTIFACT  /mlflow/mlruns
+#                 ENV MLFLOW_BACKEND  sqlite:////{user}/backend.sqlite
+#                 ENV MLFLOW_ARTIFACT  /{user}/mlruns
 #
-#                 RUN pip install mlflow==1.14.1
-#                 RUN mkdir $MLFLOW_HOME
-#                 RUN mkdir -p $MLFLOW_BACKEND
+#                 RUN pip install mlflow==1.16.0
+#                 RUN pip install boto3==1.17.67
+#
+#                 RUN useradd -m -d /{user} {user}
 #                 RUN mkdir -p $MLFLOW_ARTIFACT
+#                 RUN chown -R {user} /{user}
+#                 USER {user}
+#                 WORKDIR /{user}
 #
 #                 WORKDIR $MLFLOW_HOME
 #
@@ -382,32 +431,56 @@ def dockerfile_template_tracker(port=8002):
 #     ''')
 #     return template
 # Eliminate the AGENT_PORT because it is fed in runtime (starting)
-def dockerfile_template_tracker_agent(port=8003):
-    # if app_type == 'single':
-    base_image = 'continuumio/miniconda3'
-    user = 'tracker'
+# def dockerfile_template_supervisor_agent(port=8003):
+#     # if app_type == 'single':
+#     base_image = 'continuumio/miniconda3'
+#     user = 'tracker'
+#     template = dedent(f'''
+#                 FROM {base_image}
+#                 LABEL maintainer='scanflow'
+#
+#                 RUN pip install mlflow==1.14.1
+#                 RUN pip install fastapi
+#                 RUN pip install uvicorn
+#                 RUN pip install aiohttp
+#                 RUN pip install aiodns
+#
+#                 ENV AGENT_PORT  {port}
+#                 ENV AGENT_HOME  /{user}/agent
+#
+#                 RUN useradd -m -d /{user} {user}
+#                 RUN mkdir -p $AGENT_HOME
+#                 RUN chown -R {user} /{user}
+#                 USER {user}
+#                 WORKDIR $AGENT_HOME
+#
+#                 CMD uvicorn tracker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
+#
+#     ''')
+#     return template
+def dockerfile_template_supervisor_agent(port=8003):
+    base_template = dockerfile_template_base()
+    agent_name = 'supervisor'
+    home = f'/home/dev/{agent_name}'
     template = dedent(f'''
-                FROM {base_image}
-                LABEL maintainer='scanflow'
-
-                RUN pip install mlflow==1.14.1
-                RUN pip install fastapi
-                RUN pip install uvicorn
-                RUN pip install aiohttp
-                RUN pip install aiodns
+                RUN pip install fastapi==0.64.0
+                RUN pip install uvicorn==0.13.4
+                RUN pip install aiohttp==3.7.4
+                RUN pip install aiodns==2.0.0
 
                 ENV AGENT_PORT  {port}
-                ENV AGENT_HOME  /{user}/agent
+                ENV AGENT_HOME  {home}/agent
 
-                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p {home}
                 RUN mkdir -p $AGENT_HOME
-                RUN chown -R {user} /{user}
-                USER {user}
+
                 WORKDIR $AGENT_HOME
 
-                CMD uvicorn tracker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
-
+                CMD uvicorn {agent_name}_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
     ''')
+
+    template = base_template + template
+
     return template
 
 
@@ -430,108 +503,157 @@ def dockerfile_template_checker(port=8004):
     return template
 
 def dockerfile_template_checker_agent(port=8005):
-    # if app_type == 'single':
-    base_image = 'continuumio/miniconda3'
-    user = 'checker'
+    base_template = dockerfile_template_base()
+    agent_name = 'checker'
+    home = f'/home/dev/{agent_name}'
     template = dedent(f'''
-                FROM {base_image}
-                LABEL maintainer='scanflow'
-
-                RUN pip install mlflow==1.14.1
-                RUN pip install fastapi
-                RUN pip install uvicorn
-                RUN pip install aiohttp
-                RUN pip install aiodns
+                RUN pip install fastapi==0.64.0
+                RUN pip install uvicorn==0.13.4
+                RUN pip install aiohttp==3.7.4
+                RUN pip install aiodns==2.0.0
 
                 ENV AGENT_PORT  {port}
-                ENV AGENT_HOME  /{user}/agent
+                ENV AGENT_HOME  {home}/agent
 
-                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p {home}
                 RUN mkdir -p $AGENT_HOME
-                RUN chown -R {user} /{user}
-                USER {user}
+
                 WORKDIR $AGENT_HOME
 
-                CMD uvicorn checker_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
-
+                CMD uvicorn {agent_name}_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
     ''')
+
+    template = base_template + template
+
     return template
 
 def dockerfile_template_improver_agent(port=8005):
-    # if app_type == 'single':
-    base_image = 'continuumio/miniconda3'
-    user = 'improver'
+    base_template = dockerfile_template_base()
+    agent_name = 'improver'
+    home = f'/home/dev/{agent_name}'
     template = dedent(f'''
-                FROM {base_image}
-                LABEL maintainer='scanflow'
-
-                RUN pip install mlflow==1.14.1
-                RUN pip install fastapi
-                RUN pip install uvicorn
-                RUN pip install aiohttp
-                RUN pip install aiodns
+                RUN pip install fastapi==0.64.0
+                RUN pip install uvicorn==0.13.4
+                RUN pip install aiohttp==3.7.4
+                RUN pip install aiodns==2.0.0
 
                 ENV AGENT_PORT  {port}
-                ENV AGENT_HOME  /{user}/agent
+                ENV AGENT_HOME  {home}/agent
 
-                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p {home}
                 RUN mkdir -p $AGENT_HOME
-                RUN chown -R {user} /{user}
-                USER {user}
+
                 WORKDIR $AGENT_HOME
 
-                CMD uvicorn improver_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
-
+                CMD uvicorn {agent_name}_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
     ''')
+
+    template = base_template + template
+
     return template
 
 def dockerfile_template_planner_agent(port=8005):
-    base_image = 'continuumio/miniconda3'
-    user = 'planner'
+    base_template = dockerfile_template_base()
+    agent_name = 'planner'
+    home = f'/home/dev/{agent_name}'
     template = dedent(f'''
-                FROM {base_image}
-                LABEL maintainer='scanflow'
-
-                RUN pip install mlflow==1.14.1
-                RUN pip install fastapi
-                RUN pip install uvicorn
-                RUN pip install aiohttp
-                RUN pip install aiodns
+                RUN pip install fastapi==0.64.0
+                RUN pip install uvicorn==0.13.4
+                RUN pip install aiohttp==3.7.4
+                RUN pip install aiodns==2.0.0
 
                 ENV AGENT_PORT  {port}
-                ENV AGENT_HOME  /{user}/agent
+                ENV AGENT_HOME  {home}/agent
 
-                RUN useradd -m -d /{user} {user}
+                RUN mkdir -p {home}
                 RUN mkdir -p $AGENT_HOME
-                RUN chown -R {user} /{user}
-                USER {user}
+
                 WORKDIR $AGENT_HOME
 
-                CMD uvicorn planner_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
-
+                CMD uvicorn {agent_name}_agent:app --reload --host 0.0.0.0 --port $AGENT_PORT
     ''')
+
+    template = base_template + template
+
     return template
 
-def dockerfile_template_predictor(image, port=8010, model="mnist_cnn", version=1):
-    base_image = image
-    # base_image = 'continuumio/miniconda3'
-    # RUN chmod -R 777 /opt/conda/
-    # ENV PREDICTOR_HOME  /{user}
-    # RUN useradd -m -d /{user} {user}
-    # RUN mkdir -p $PREDICTOR_HOME
-    # RUN chown -R {user} /{user}
-    # USER {user}
-    # WORKDIR $PREDICTOR_HOME
-    user = 'predictor'
+def dockerfile_template_predictor_ui(predictor):
+    # base_template = dockerfile_template_base()
+
+    base_image = predictor['image']
+    port = predictor['port']
+    file = predictor['file']
+    function = predictor['function']
+
+    name = 'predictor'
+    home = f'/home/dev/{name}'
+
+    file = file.replace('.py', '')
+
     template = dedent(f'''
                 FROM {base_image}
-                LABEL maintainer='scanflow'
+
+                RUN pip install opyrator==0.0.12
+
+                RUN mkdir -p {home}
+                WORKDIR {home}
 
                 ENV PREDICTOR_PORT  {port}
-                CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT --no-conda
+                CMD opyrator launch-ui {file}:{function} --port $PREDICTOR_PORT
 
     ''')
+    # template = base_template + template
+
     return template
+
+def dockerfile_template_predictor_api(predictor):
+    # base_template = dockerfile_template_base()
+
+    base_image = predictor['image']
+    port = predictor['port']
+    file = predictor['file']
+    function = predictor['function']
+
+    name = 'predictor'
+    home = f'/home/dev/{name}'
+
+    file = file.replace('.py', '')
+
+    template = dedent(f'''
+                FROM {base_image}
+
+                RUN pip install opyrator==0.0.12
+
+                RUN mkdir -p {home}
+                WORKDIR {home}
+
+                ENV PREDICTOR_PORT  {port}
+                CMD opyrator launch-api {file}:{function} --port $PREDICTOR_PORT
+
+    ''')
+    # template = base_template + template
+
+    return template
+# def dockerfile_template_predictor(image, port=8010, model="mnist_cnn", version=1):
+#     base_image = image
+#     # base_image = 'continuumio/miniconda3'
+#     # RUN chmod -R 777 /opt/conda/
+#     # ENV PREDICTOR_HOME  /{user}
+#     # RUN useradd -m -d /{user} {user}
+#     # RUN mkdir -p $PREDICTOR_HOME
+#     # RUN chown -R {user} /{user}
+#     # USER {user}
+#     # WORKDIR $PREDICTOR_HOME
+#     user = 'predictor'
+#     template = dedent(f'''
+#                 FROM {base_image}
+#                 LABEL maintainer='scanflow'
+#
+#                 ENV PREDICTOR_PORT  {port}
+#                 CMD mlflow models serve -m "models:/{model}/{version}" --host 0.0.0.0 --port $PREDICTOR_PORT --no-conda
+#
+#     ''')
+#     return template
 
 # def dockerfile_template_predictor(port=8010, model="mnist_cnn", version=1):
 #     base_image = 'continuumio/miniconda3'
@@ -576,15 +698,15 @@ def generate_main_file(app_dir, id_date):
     # Workflows
     workflow1 = [
         {{'name': 'gathering-{id_date}', 'file': 'gathering.py',
-                'env': 'gathering'}},
+                'image': 'gathering'}},
 
         {{'name': 'preprocessing-{id_date}', 'file': 'preprocessing.py',
-                'env': 'preprocessing'}},
+                'image': 'preprocessing'}},
 
     ]
     workflow2 = [
         {{'name': 'modeling-{id_date}', 'file': 'modeling.py',
-                'env': 'modeling'}},
+                'image': 'modeling'}},
 
 
     ]
@@ -785,76 +907,6 @@ def create_network(name):
         logging.error(f"{e}")
         logging.error(f"[-] Starting network: [{name}] failed.", exc_info=True)
 
-
-# def generate_data(path, file_system='local', **args):
-#     """
-#         n_samples=100,n_features=4,
-#         class_sep=1.0, n_informative=2,
-#         n_redundant=2, random_state=rs
-#
-#         Example:
-#         generate_data(path='./raw_data.csv', file_system='local',
-#                   n_samples=10000, n_features=4,
-#                   class_sep=1.0, n_informative=2,
-#                   n_redundant=2, random_state=1)
-#     """
-#
-#     X, y = make_classification(**args)
-#
-#     df = pd.DataFrame(X, columns=['x_' + str(i + 1) for i in range(X.shape[1])])
-#     df = pd.concat([df, pd.DataFrame({'y': y})], axis=1)
-#
-#     if file_system == 'local':
-#         df.to_csv(path, index=False)
-#         print(df.head())
-#         logging.info(f'Dataset was generated successfully and saved in {path} ')
-#
-#     elif file_system == 'hdfs':
-#         from pyspark.sql import SparkSession
-#
-#         cluster_manager = 'yarn'
-#         spark = SparkSession.builder \
-#             .master(cluster_manager) \
-#             .appName("myapp") \
-#             .config("spark.driver.allowMultipleContexts", "true") \
-#             .getOrCreate()
-#
-#         spark_df = spark.createDataFrame(df)
-#         spark_df.show(5)
-#         spark_df.limit(10000).write.mode('overwrite').parquet(path)
-#         logging.info(f'Dataset was generated successfully and saved in hdfs://{path} ')
-
-
-# def generate_mlproject(folder, environment, wflow_name='workflow_app'):
-#     # workflow_path = os.path.join(folder, 'workflow')
-#     # list_dir_mlproject = os.listdir(workflow_path)
-#     # mlproject = [w for w in list_dir_mlproject if 'MLproject' in w]
-#     mlproject_path = os.path.join(folder, 'workflow', 'MLproject')
-#     # if len(mlproject) == 0:
-#     mlproject = mlproject_template(environment, wflow_name)
-#     # with open(mlproject_path, 'w') as f:
-#     #     f.writelines(mlproject)
-#     filename = f"{mlproject_path}_{environment['name']}"
-#     with open(filename, 'w') as f:
-#         yaml.dump(mlproject, f, default_flow_style=False)
-#
-#     logging.info(f'[+] MLproject [{filename}] was created successfully.')
-#     # else:
-#     #     logging.info(f'[+] MLproject was found.')
-#     return mlproject_path
-
-
-# def mlproject_template(environment, wflow_name):
-#
-#     mlproject = {'name': f"{wflow_name}_{environment['name']}",
-#                  'entry_points': {
-#                      'main': {'command': f"python {environment['file']}"}
-#                  }
-#                  }
-#
-#     return mlproject
-
-
 def format_parameters(params):
     list_params = list()
     for k, v in params.items():
@@ -880,7 +932,10 @@ def get_scanflow_paths(app_dir):
     meta_dir = os.path.join(stuff_dir, 'meta')
 
     tracker_dir = os.path.join(stuff_dir, 'tracker')
-    tracker_agent_dir = os.path.join(tracker_dir, 'agent')
+    # tracker_agent_dir = os.path.join(tracker_dir, 'agent')
+
+    supervisor_dir = os.path.join(stuff_dir, 'supervisor')
+    supervisor_agent_dir = os.path.join(supervisor_dir, 'agent')
 
     checker_dir = os.path.join(stuff_dir, 'checker')
     checker_agent_dir = os.path.join(checker_dir, 'agent')
@@ -892,23 +947,30 @@ def get_scanflow_paths(app_dir):
     planner_agent_dir = os.path.join(planner_dir, 'agent')
 
     predictor_dir = os.path.join(stuff_dir, 'predictor')
-    # checker_pred_dir = os.path.join(checker_dir, 'predictions')
-    # checker_model_dir = os.path.join(checker_dir, 'model')
-    # checker_scaler_dir = os.path.join(checker_dir, 'scaler')
-
 
     paths = {'app_dir': app_dir,
                 'app_workflow_dir': app_workflow_dir,
                 'stuff_dir': stuff_dir,
                 'meta_dir': meta_dir,
+
+                # Mlflow
                 'tracker_dir': tracker_dir,
-                'tracker_agent_dir': tracker_agent_dir,
+                # 'tracker_agent_dir': tracker_agent_dir,
+
+                # Agents
+                'supervisor_dir': supervisor_dir,
+                'supervisor_agent_dir': supervisor_agent_dir,
+
                 'checker_dir': checker_dir,
                 'checker_agent_dir': checker_agent_dir,
+
                 'improver_dir': improver_dir,
                 'improver_agent_dir': improver_agent_dir,
+
                 'planner_dir': planner_dir,
                 'planner_agent_dir': planner_agent_dir,
+
+                 # Predictor API
                 'predictor_dir': predictor_dir
             }
                 # 'checker_pred_dir': checker_pred_dir,
@@ -975,16 +1037,18 @@ def run_step(step, workflow_name=None, tracker_port=8002):
 
         env_container = client.containers.get(env_name)
         if 'parameters' in step.keys():
+            # cmd = f"conda run -n env python {step['file']} {format_parameters(step['parameters'])}"
             cmd = f"python {step['file']} {format_parameters(step['parameters'])}"
             # result = env_container.exec_run(cmd=cmd,
             #                                 workdir='/executor/workflow')
             # result = env_container.exec_run(cmd=cmd,
             #                                 workdir='/mlperf')
             result = env_container.exec_run(cmd=cmd,
-                                            workdir='/executor/workflow')
+                                            workdir='/home/dev/executor/workflow')
         else:
+            # result = env_container.exec_run(cmd=f"conda run -n env python {step['file']}",
             result = env_container.exec_run(cmd=f"python {step['file']}",
-                                            workdir='/executor/workflow')
+                                            workdir='/home/dev/executor/workflow')
 
         # result = env_container.exec_run(cmd=f"python workflow/{self.workflow['main']}")
         logging.info(f"[+] Running ({step['file']}). ")
@@ -992,30 +1056,6 @@ def run_step(step, workflow_name=None, tracker_port=8002):
 
         logging.info(f"[+] Environment ({env_name}) finished successfully. ")
 
-        # mlflow.set_tracking_uri(f"http://0.0.0.0:{tracker_port}")
-        # client = MlflowClient()
-        # experiment_name = 'Scanflow'
-        # experiment = client.get_experiment_by_name(experiment_name)
-        #
-        # if experiment:
-        #     experiment_id = experiment.experiment_id
-        #     logging.info(f"[Tracker]  '{experiment_name}' experiment loaded.")
-        # else:
-        #     experiment_id = client.create_experiment(experiment_name)
-        #     logging.info(f"[Tracker]  '{experiment_name}' experiment does not exist. Creating a new one.")
-        #
-        #
-        # with mlflow.start_run(experiment_id=experiment_id,
-        #                       run_name="containers") as mlrun:
-        #     # for container_info in containers_info:
-        #     d = {'name': step['name'],
-        #          'file': step['file'],
-        #          'requirements': step['requirements']
-        #          }
-        #     d.update(step['parameters'])
-        #     mlflow.log_params(d)
-
-        # return env_container, result
         return env_name, result
         # self.logs_workflow = result.output.decode("utf-8")
 
@@ -1043,6 +1083,29 @@ def save_workflow(workflow, name, path):
     with open(workflow_metadata_path, 'w') as fout:
         json.dump(workflow, fout)
 
+
+def track_scanflow_info(workflow_user, app_dir, host_gateway):
+    tracker_port = workflow_user['tracker']['port']
+    mlflow.set_tracking_uri(f"http://0.0.0.0:{tracker_port}")
+    client = MlflowClient()
+    experiment_name = 'Scanflow'
+    experiment = client.get_experiment_by_name(experiment_name)
+
+    if experiment:
+        experiment_id = experiment.experiment_id
+        logging.info(f"[Tracker]  '{experiment_name}' experiment loaded.")
+    else:
+        experiment_id = client.create_experiment(experiment_name)
+        logging.info(f"[Tracker]  '{experiment_name}' experiment does not exist. Creating a new one.")
+
+
+    with mlflow.start_run(experiment_id=experiment_id,
+                          run_name="info") as mlrun:
+        # for container_info in containers_info:
+        d = {'app_dir': app_dir,
+             'host_gateway': host_gateway}
+
+        mlflow.log_params(d)
 
 def track_containers(containers_info, path, tracker_port=8002):
 
@@ -1115,8 +1178,6 @@ def track_containers(containers_info, path, tracker_port=8002):
             #               'name': container_info['name']})
 
             mlflow.log_params(container_info)
-            # TODO: create a FTP server and put it on a container
-            # mlflow.log_dict(container_info, f"{container_info['name']}.json")
 
 def remove_track_containers(container_names, path):
     run_name = "containers_alive"

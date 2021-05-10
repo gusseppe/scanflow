@@ -3,7 +3,7 @@ import mlflow
 import json
 import aiohttp
 import logging
-import tools
+import agent
 import urllib.parse
 
 from mlflow.tracking import MlflowClient
@@ -29,13 +29,15 @@ client = MlflowClient()
 class Config():
     agent_name = 'Improver'
 
-    app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
+    # app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
     improver_filename = 'conclusions.json'
-    tracker_uri = "http://inference-mnist-tracker-agent:8003"
-    checker_uri = "http://inference-mnist-checker-agent:8005/feedback/anomaly/last"
-    planner_uri = "http://inference-mnist-planner-agent:8007/planner/plans"
+    agents_uri = agent.get_agents_uri()
+    supervisor_uri = f"{agents_uri['supervisor']}"
+    checker_uri = f"{agents_uri['checker']}/feedback/anomaly/last"
+    planner_uri = f"{agents_uri['planner']}/planner/plans"
 
-    host_uri = 'http://192.168.96.1:8050/run/executor'
+    host_uri = agent.get_host_uri()
+    host_uri = f"{host_uri}/run/executor"
     # host_uri = 'http://192.168.96.1:8050/run/workflow'
 
 experiment = client.get_experiment_by_name(Config.agent_name)
@@ -86,14 +88,13 @@ async def execute_improver(feedback: dict):
     else:
         # Get the current model from tracker
         relative_uri = "tracker/model/current"
-        uri = urllib.parse.urljoin(Config.tracker_uri, relative_uri)
+        uri = urllib.parse.urljoin(Config.supervisor_uri, relative_uri)
         message = Message("", "INFORM", uri)
         async with app.aiohttp_session.get(message.receiver) as response:
             result_tracker = await response.json(content_type=None)
 
 
-        new_model_name = 'mnist_cnn'
-        # new_model_name = 'mnist_cnn_new'
+        new_model_name = 'mnist_cnn_new'
         scanflow_request = {
             # 'app_dir': Config.app_dir,
             'name': 'retraining-mnist-retraining',
@@ -112,12 +113,12 @@ async def execute_improver(feedback: dict):
 
         print(result_host)
 
-        old_metric = tools.get_metadata(executor_name='training', metric='accuracy')
-        new_metric = tools.get_metadata(executor_name='retraining', metric='accuracy')
+        old_metric = agent.get_metadata(executor_name='training', metric='accuracy')
+        new_metric = agent.get_metadata(executor_name='retraining', metric='accuracy')
 
         if new_metric > old_metric:
             relative_uri = "tracker/model/new"
-            uri = urllib.parse.urljoin(Config.tracker_uri, relative_uri)
+            uri = urllib.parse.urljoin(Config.supervisor_uri, relative_uri)
             message = Message("", "INFORM", uri)
             async with app.aiohttp_session.get(message.receiver) as response:
                 tracker_new_model = await response.json(content_type=None)

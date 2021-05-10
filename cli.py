@@ -18,7 +18,7 @@ def cli():
 @click.option("--mlflow_port", default=8002,
               help="The MLflow port (default: 8002).")
 @click.option("--mas_port", default=8003,
-              help="The MAS (Tracker agent) port (default: 8003).")
+              help="The MAS (Supervisor agent) port (default: 8003).")
 def server(server_port, mlflow_port, mas_port):
 
     try:

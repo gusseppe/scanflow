@@ -5,7 +5,7 @@ import pandas as pd
 import time
 import numpy as np
 import torch
-
+import pytorch_lightning as pl
 from pathlib import Path
 
 @click.command(help="Make predictions")
@@ -19,7 +19,7 @@ def inference(model_name, model_version, model_stage, x_inference_path):
 
         img_rows, img_cols = 28, 28
         x_test = np.load(x_inference_path)
-#         x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols)
+        x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols)
         
         if model_stage:
             model = mlflow.pytorch.load_model(
@@ -59,4 +59,5 @@ def predict(model, x_test):
     return preds.cpu().detach().numpy()
 
 if __name__ == '__main__':
+    pl.seed_everything(42)
     inference()
