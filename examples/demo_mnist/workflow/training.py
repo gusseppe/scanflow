@@ -33,7 +33,7 @@ client = MlflowClient()
 @click.option("--y_train_path", default='./images', type=str)
 @click.option("--x_test_path", default='./images', type=str)
 @click.option("--y_test_path", default='./images', type=str)
-@click.option("--epochs", default=7, type=int)
+@click.option("--epochs", default=6, type=int)
 def training(model_name, x_train_path, y_train_path, 
              x_test_path, y_test_path, epochs):
     with mlflow.start_run(run_name='training') as mlrun:

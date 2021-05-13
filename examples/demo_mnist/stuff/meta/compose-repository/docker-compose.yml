@@ -1,26 +1,13 @@
 version: '3'
 services:
-  retraining:
-    image: retraining
-    container_name: retraining-20210510122659
+  tracker-inference-mnist:
+    image: tracker-inference-mnist
+    container_name: tracker-inference-mnist-20210513134346
     networks:
-    - network-retraining-mnist
-    depends_on:
-    - tracker-retraining-mnist
-    environment:
-      MLFLOW_TRACKING_URI: http://tracker-retraining-mnist:8002
+    - network-inference-mnist
     volumes:
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/:/executor
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
-    tty: 'true'
-  tracker-retraining-mnist:
-    image: tracker-retraining-mnist
-    container_name: tracker-retraining-mnist-20210510122659
-    networks:
-    - network-retraining-mnist
-    volumes:
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-retraining-mnist:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-inference-mnist:/mlflow
     ports:
     - 8007:8002
 networks:
-  network_retraining-mnist: null
+  network_inference-mnist: null

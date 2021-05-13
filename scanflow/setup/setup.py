@@ -294,7 +294,7 @@ class Workflow(object):
         self._checker = checker
         self._improver = improver
         self._planner = planner
-        self._planner = predictor
+        self._predictor = predictor
 
         self.parallel = parallel
         self._to_dict = locals()
@@ -304,7 +304,9 @@ class Workflow(object):
 
     @property
     def executors(self):
-        if self._executors and isinstance(self._executors[0], Executor):
+        if self._executors is None:
+            return []
+        elif self._executors and isinstance(self._executors[0], Executor):
             return self._executors
             # return self._executors
         else:

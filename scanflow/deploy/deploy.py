@@ -937,6 +937,10 @@ class Deploy:
             pool = Pool(processes=len(steps))
             pool.map(tools.run_step, steps)
         else:
+            if len(workflow['executors']) == 0:
+                logging.warning(f"[+] There are not executors to run.")
+                return None
+
             for step in workflow['executors']:
                 logging.info(f"[+] Running image: [{workflow['name']}:{step['name']}].")
 
@@ -944,6 +948,8 @@ class Deploy:
                 containers.append({'name': step['name'],
                                    'ctn': env_container,
                                    'result': result.output.decode('utf-8')})
+
+
 
         return containers
 

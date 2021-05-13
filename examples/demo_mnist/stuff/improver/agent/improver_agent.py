@@ -146,7 +146,7 @@ async def execute_improver(feedback: dict):
             }
         else:
             response = {'conclusions': {
-                    "action": f'Retraining was performed (p_anomalies > {threshold_hig}) Planner was not triggered.',
+                    "action": f'Retraining was performed (p_anomalies > {threshold_hig}) but Planner was not triggered.',
                     "result":  f"current_metric={new_metric} >= new_metric={new_metric}"
                 }
             }
