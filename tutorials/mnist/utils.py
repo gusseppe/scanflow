@@ -48,15 +48,14 @@ def save_images(x):
     with open(images, 'wb') as f:
         np.save(f, x)
         
-def sample_train_mnist():
+def sample_train_mnist(n=1000):
     mnist_dataset = tf.keras.datasets.mnist
     (x_train, y_train), (x_test, y_test) = mnist_dataset.load_data()
 
     np.random.seed(42)
 
-    sample_training = 1000
     x_idx = np.random.choice(range(len(x_train)), 
-                                  size=sample_training, replace=False)
+                                  size=n, replace=False)
     x_train_sample, y_train_sample = x_train[x_idx], y_train[x_idx] 
 
     base_path = os.path.dirname(os.getcwd())

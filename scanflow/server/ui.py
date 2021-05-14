@@ -103,11 +103,11 @@ def supervisor_explanation(client):
                     html.P(f"Got new inference data with {x_inference_len} instances.", className="card-text"),
 
                     html.H5(f"Result", className="card-title"),
-                    html.P(f"Send metadata: train data = {x_train_len} instances to Improver.",
+                    html.P(f"Send metadata: train data = {x_train_len} instances to Checker.",
                            className="card-text"),
-                    html.P(f"Send inference data = {x_inference_len} instances to Improver.",
+                    html.P(f"Send inference data = {x_inference_len} instances to Checker.",
                            className="card-text"),
-                    html.P(f"Send training executor name = [{training_executor_name}] instances to Improver.",
+                    html.P(f"Send training executor name = [{training_executor_name}] instances to Checker.",
                            className="card-text")
                 ]
             ),
@@ -149,7 +149,7 @@ def checker_explanation(client):
                     html.P(f"Augmented data (x_train+x_chosen) : {x_new_train_len} instances.", className="card-text"),
 
                     html.H5(f"Result", className="card-title"),
-                    html.P(f"Sent augmented data ({x_new_train_len} instances) to Improver", className="card-text")
+                    html.P(f"Send augmented data ({x_new_train_len} instances) to Improver", className="card-text")
                 ]
             ),
         ]
@@ -193,7 +193,6 @@ def improver_explanation(client):
 
                         html.H4(f"Result", className="card-title"),
                         html.P(f"{result}", className="card-text"),
-                        html.P(f"Please consider using the new model.", className="card-text")
                     ]
                 ),
             ]
@@ -242,7 +241,8 @@ def planner_explanation(client):
                     html.H5(f"New model", className="card-title"),
                     html.P(f"{response['new_model_name']}/{response['new_model_version']}", className="card-text"),
                     html.H5(f"Result", className="card-title"),
-                    html.P(f"{response['result']}", className="card-text")
+                    html.P(f"{response['result']}", className="card-text"),
+                    html.P(f"Please consider using this new model.", className="card-text")
                 ]
             ),
         ]
