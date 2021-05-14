@@ -138,7 +138,7 @@ async def execute_improver(feedback: dict):
                 result_planner = await response.json(content_type=None)
 
             response = {'conclusions': {
-                    "action": f"Retraining was performed (p_anomalies > {threshold_hig}) and Planner is triggered.",
+                    "action": f"Retraining was performed (because p_anomalies > {threshold_hig}) and Planner is triggered.",
                 # "action": f"Retraining was performed using the new augmented data={feedback['x_new_train_artifact']}",
                     "result":  f"current_metric={old_metric} < new_metric={new_metric}",
                     "planner": result_planner,
@@ -146,7 +146,7 @@ async def execute_improver(feedback: dict):
             }
         else:
             response = {'conclusions': {
-                    "action": f'Retraining was performed (p_anomalies > {threshold_hig}) but Planner was not triggered.',
+                    "action": f'Retraining was performed (bacause p_anomalies > {threshold_hig}) but Planner was not triggered.',
                     "result":  f"current_metric={new_metric} >= new_metric={new_metric}"
                 }
             }
@@ -158,6 +158,8 @@ async def execute_improver(feedback: dict):
                           run_name=Config.agent_name) as mlrun:
         mlflow.log_artifact(Config.improver_filename, 'Conclusions')
         mlflow.log_params(response['conclusions'])
+        mlflow.log_param(key='p_anomalies',
+                         value=f"{p_anomalies}")
 
     return  response
 

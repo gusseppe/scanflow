@@ -91,7 +91,7 @@ def training(model_name, x_train_path, y_train_path,
         else:
             mlflow.pytorch.save_model(model, model_path)
             
-        mlflow.log_metric(key='accuracy', value=round(score, 2))
+        mlflow.log_metric(key='accuracy', value=round(score, 3))
         mlflow.log_param(key='x_len', value=x_train.shape[0])
 
 #         mlflow.log_artifact(x_train_path, 'dataset')

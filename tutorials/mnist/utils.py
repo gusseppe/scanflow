@@ -9,38 +9,6 @@ import plotly.graph_objects as go
 
 from datetime import datetime
 
-def plot_predictions(E_full, E_test, n_tests = 200, name_corr='anomaly'):
-    n_train = n_tests
-    E_train = E_full[E_full['Anomaly'].isna()].copy()
-
-    fig = go.Figure()
-
-    fig.add_trace(go.Scatter(x=E_full.tail(n_tests+n_train).index, y=E_full['Threshold_high'].tail(n_tests+n_train), 
-                             name="Threshold",
-                             line_color='dimgray'))
-    fig.add_trace(go.Scatter(x=E_full.tail(n_tests+n_train).index, y=E_full['Threshold_low'].tail(n_tests+n_train), 
-                             name="Threshold",
-                             line_color='dimgray'))
-    fig.add_trace(go.Scatter(x=E_train.tail(n_train).index, 
-                             y=E_train['Loss_mae'].tail(n_train), name="Loss Training",
-                             line_color='deepskyblue'))
-
-    if all(E_test['Anomaly']):
-        fig.add_trace(go.Scatter(x=E_test.index, y=E_test['Loss_mae'], name="Loss Testing",
-                                 line_color='red'))
-    elif not any(E_test['Anomaly']):
-        fig.add_trace(go.Scatter(x=E_test.index, y=E_test['Loss_mae'], name="Loss Testing",
-                                 line_color='green'))
-    else:
-        fig.add_trace(go.Scatter(x=E_test.index, y=E_test['Loss_mae'], name="Loss Testing",
-                                 line_color='blue'))
-
-    fig.update_layout(title_text=f'Checker prediction on test data, {name_corr}',
-                      xaxis_rangeslider_visible=True)
-    
-    # fig.write_image(f"checker_anomaly_{name}.png")
-
-    fig.show()
     
 def show_numbers(x, y, n_display=9, title='MNIST'):
     n_cells = math.ceil(math.sqrt(n_display))

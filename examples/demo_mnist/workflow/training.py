@@ -33,7 +33,7 @@ client = MlflowClient()
 @click.option("--y_train_path", default='./images', type=str)
 @click.option("--x_test_path", default='./images', type=str)
 @click.option("--y_test_path", default='./images', type=str)
-@click.option("--epochs", default=6, type=int)
+@click.option("--epochs", default=7, type=int)
 def training(model_name, x_train_path, y_train_path, 
              x_test_path, y_test_path, epochs):
     with mlflow.start_run(run_name='training') as mlrun:
@@ -91,7 +91,7 @@ def training(model_name, x_train_path, y_train_path,
         else:
             mlflow.pytorch.save_model(model, model_path)
             
-        mlflow.log_metric(key='accuracy', value=round(score, 2))
+        mlflow.log_metric(key='accuracy', value=round(score, 3))
         mlflow.log_param(key='x_len', value=x_train.shape[0])
 
 #         mlflow.log_artifact(x_train_path, 'dataset')

@@ -45,14 +45,14 @@ def detector(run_id, x_inference_artifact, y_inference_artifact, detector_path):
         x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
         
         date = datetime.today()
-
+        wanted_anomalies = int(x_inference.shape[0]*0.4)
         detector, E_full, E_test, test = detector_utils.get_detector(x_inference, x_inference, 
-                                                    epochs=10, 
-                                                    model_path=detector_path,
-                                                    date=date, 
-                                                    wanted_anomalies=5)
+                            epochs=10, 
+                            model_path=detector_path,
+                            date=date, 
+                            wanted_anomalies=wanted_anomalies)
         
-        n_critical_points = 5
+        n_critical_points = int(wanted_anomalies*0.10)
         x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test, 
                                                                        x_inference, y_inference,
                                                                        n_critical_points)

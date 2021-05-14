@@ -71,11 +71,13 @@ async def send_to_checker():
     # runs_info = client.list_run_infos('0', # Get the default experiment
     #                                   order_by=["attribute.start_time DESC"])
 
-    runs_info_training = client.search_runs('0', "tag.mlflow.runName='training'",
+    training_executor_name = "training"
+    runs_info_training = client.search_runs('0', f"tag.mlflow.runName='{training_executor_name}'",
                                    order_by=["attribute.start_time DESC"],
                                    max_results=1)
 
-    runs_info_inference = client.search_runs('0', "tag.mlflow.runName='inference_batch'",
+    inference_executor_name = "inference_batch"
+    runs_info_inference = client.search_runs('0', f"tag.mlflow.runName='{inference_executor_name}'",
                        order_by=["attribute.start_time DESC"],
                        max_results=1)
 
@@ -117,11 +119,23 @@ async def send_to_checker():
         with open(Config.tracker_belief_filename, 'w') as fout:
             json.dump(response, fout)
 
+        x_train_len = agent.get_metadata(experiment_name="Default",
+                                         executor_name='training',
+                                         param='x_len')
+        x_inference_len = agent.get_metadata(experiment_name="Default",
+                                         executor_name='inference_batch',
+                                         param='n_predictions')
         with mlflow.start_run(experiment_id=experiment_id,
                               run_name=Config.agent_name) as mlrun:
             mlflow.log_artifact(Config.tracker_belief_filename, 'Summary')
-            mlflow.log_param(key='response_time',
-                             value=1.2)
+            mlflow.log_param(key='x_train_len',
+                             value=x_train_len)
+            mlflow.log_param(key='x_inference_len',
+                             value=x_inference_len)
+            mlflow.log_param(key='training_executor_name',
+                             value=training_executor_name)
+            mlflow.log_param(key='inference_executor_name',
+                             value=inference_executor_name)
     else:
         response = {"Result": 'No input found'}
 

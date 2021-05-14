@@ -265,6 +265,8 @@ async def execute_checker_anomaly(content: Dict[str, str]):
                          value=f"{len(x_new_train)}")
         mlflow.log_param(key='n_anomalies',
                          value=f"{n_anomalies}")
+        mlflow.log_param(key='p_anomalies',
+                         value=f"{p_anomalies}")
         mlflow.log_param(key='feedback',
                          value=f"{feedback_filename}")
         # mlflow.log_param(key='feedback',

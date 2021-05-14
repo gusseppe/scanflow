@@ -24,7 +24,6 @@ filename = 'x_inference_dashboard.npy'
 content = {'name': 'inference-mnist-inference',
           'parameters':{'model_name':model_name, 
                         'model_version': model_version,
-#                         'model_stage':"Production",
                         'x_inference_path': filename}}
     
 def inference(x_inference):
@@ -68,7 +67,7 @@ def classifier(folder):
     
     return df
 
-textbox = gr.inputs.Textbox(label="Folder", default='images/mix')
+textbox = gr.inputs.Textbox(label="Folder", default='images/mix_big')
 iface = gr.Interface(classifier, textbox, "dataframe", server_port=7860, verbose=True)
 
 iface.launch(inline=False, debug=True) # Change inline=False in script.py

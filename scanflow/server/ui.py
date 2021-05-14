@@ -1,5 +1,6 @@
 import dash
 import json
+from scanflow.server import agent
 import os
 import sys
 import dash_bootstrap_components as dbc
@@ -79,21 +80,158 @@ def layout_rows(cards):
 
     return rows
 
-def get_plan(client):
-    agent_name = "Planner"
-    experiment = client.get_experiment_by_name(agent_name)
-    experiment_id = experiment.experiment_id
+def supervisor_explanation(client):
+    agent_name = "Supervisor"
+    data = agent.get_metadata(experiment_name=agent_name,
+                                     executor_name=agent_name,
+                                     client=client)
 
+    x_train_len = data.params['x_train_len']
+    x_inference_len = data.params['x_inference_len']
+    training_executor_name = data.params['training_executor_name']
+    inference_executor_name = data.params['inference_executor_name']
 
-    runs_info = client.search_runs(experiment_id, f"tag.mlflow.runName='{agent_name}'",
-                                   order_by=["attribute.start_time DESC"],
-                                   max_results=1)
-
-    if runs_info:
-        response = runs_info[0].data.params
+    if x_train_len and x_inference_len and training_executor_name and inference_executor_name:
 
         card_content = [
-            html.B(dbc.CardHeader(f"Last explanation : {agent_name}")),
+            html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
+            dbc.CardBody(
+                [
+
+                    html.H5(f"Action", className="card-title"),
+                    html.P(f"Multi Agent activated because of [{inference_executor_name}] executor.", className="card-text"),
+                    html.P(f"Got new inference data with {x_inference_len} instances.", className="card-text"),
+
+                    html.H5(f"Result", className="card-title"),
+                    html.P(f"Send metadata: train data = {x_train_len} instances to Improver.",
+                           className="card-text"),
+                    html.P(f"Send inference data = {x_inference_len} instances to Improver.",
+                           className="card-text"),
+                    html.P(f"Send training executor name = [{training_executor_name}] instances to Improver.",
+                           className="card-text")
+                ]
+            ),
+        ]
+        card = dbc.Col(dbc.Card(card_content, color="primary", inverse=True),
+                       width=6)
+    else:
+        return None
+
+    return card
+
+def checker_explanation(client):
+    agent_name = "Checker"
+    n_anomalies = agent.get_metadata(experiment_name=agent_name,
+                                    executor_name=agent_name,
+                                    param='n_anomalies',
+                                    client=client)
+    x_chosen_len = agent.get_metadata(experiment_name=agent_name,
+                                     executor_name=agent_name,
+                                     param='x_chosen_len',
+                                     client=client)
+    x_new_train_len = agent.get_metadata(experiment_name=agent_name,
+                                      executor_name=agent_name,
+                                      param='x_new_train_len',
+                                      client=client)
+    x_train = int(x_new_train_len) - int(x_chosen_len)
+
+    if n_anomalies and x_chosen_len and x_new_train_len:
+
+        card_content = [
+            html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
+            dbc.CardBody(
+                [
+
+                    html.H5(f"Action", className="card-title"),
+                    html.P(f"Received x_train: {x_train} instances from Supervisor.", className="card-text"),
+                    html.P(f"Detected anomalies: {n_anomalies} instances.", className="card-text"),
+                    html.P(f"Selected anomalies (x_chosen): {x_chosen_len} instances.", className="card-text"),
+                    html.P(f"Augmented data (x_train+x_chosen) : {x_new_train_len} instances.", className="card-text"),
+
+                    html.H5(f"Result", className="card-title"),
+                    html.P(f"Sent augmented data ({x_new_train_len} instances) to Improver", className="card-text")
+                ]
+            ),
+        ]
+        card = dbc.Col(dbc.Card(card_content, color="primary", inverse=True),
+                       width=6)
+    else:
+        return None
+
+    return card
+
+def improver_explanation(client):
+    agent_name = "Improver"
+
+    action = agent.get_metadata(experiment_name=agent_name,
+                                         executor_name=agent_name,
+                                         param='action',
+                                         client=client)
+    result = agent.get_metadata(experiment_name=agent_name,
+                                executor_name=agent_name,
+                                param='result',
+                                client=client)
+
+    p_anomalies = agent.get_metadata(experiment_name=agent_name,
+                                executor_name=agent_name,
+                                param='p_anomalies',
+                                client=client)
+    if action and result and p_anomalies:
+        try:
+            card_content = [
+                html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
+                dbc.CardBody(
+                    [
+
+                        html.H4(f"Action", className="card-title"),
+                        html.P(f"{action}", className="card-text"),
+                        html.P(f"p_anomalies = {p_anomalies}", className="card-text"),
+                        # html.P(f"{conclusion['action']}", className="card-text"),
+
+                        # html.H4(f"Reason", className="card-title"),
+                        # html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
+
+                        html.H4(f"Result", className="card-title"),
+                        html.P(f"{result}", className="card-text"),
+                        html.P(f"Please consider using the new model.", className="card-text")
+                    ]
+                ),
+            ]
+            card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
+                           width=6)
+        except:
+            return None
+    else:
+        return None
+
+    return card
+
+
+def planner_explanation(client):
+    agent_name = "Planner"
+
+    data = agent.get_metadata(experiment_name=agent_name,
+                                executor_name=agent_name,
+                                client=client)
+    #  = agent.get_metadata(experiment_name=agent_name,
+    #                            executor_name=agent_name,
+    #                            param='order',
+    #                            client=client)
+    #
+    # experiment = client.get_experiment_by_name(agent_name)
+    # experiment_id = experiment.experiment_id
+    #
+    #
+    # runs_info = client.search_runs(experiment_id, f"tag.mlflow.runName='{agent_name}'",
+    #                                order_by=["attribute.start_time DESC"],
+    #                                max_results=1)
+
+    response = data.params
+    if response:
+        # response = runs_info[0].data.params
+
+        card_content = [
+            html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
             dbc.CardBody(
                 [
 
@@ -108,8 +246,8 @@ def get_plan(client):
                 ]
             ),
         ]
-        card = dbc.Col(dbc.Card(card_content, color="primary", inverse=True),
-                       width=5)
+        card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
+                       width=6)
     else:
         return None
     # row = dbc.Row(
@@ -120,56 +258,19 @@ def get_plan(client):
     return card
 
 def get_explanations(client):
-    card1 = get_conclusion(client)
-    card2 = get_plan(client)
-    row = dbc.Row([card1, card2],
+    card1 = supervisor_explanation(client)
+    card2 = checker_explanation(client)
+    card3 = improver_explanation(client)
+    card4 = planner_explanation(client)
+    row1 = dbc.Row([card1, card2],
         className="mb-4",
     )
+    row2 = dbc.Row([card3, card4],
+                  className="mb-4",
+                  )
 
-    return row
+    return [row1, row2]
 
-def get_conclusion(client):
-    experiment = client.get_experiment_by_name("Improver")
-    experiment_id = experiment.experiment_id
-
-
-    runs_info = client.search_runs(experiment_id, "tag.mlflow.runName='Improver'",
-                                   order_by=["attribute.start_time DESC"],
-                                   max_results=1)
-
-    if runs_info:
-        conclusion = runs_info[0].data.params
-        # explain = dedent(f'''
-        #     ### Explanation: Improver
-        #     ###### **Action**: {conclusion['action']}
-        #     ###### **Reason**: {conclusion['reason']}
-        # ''')
-
-        try:
-            card_content = [
-                html.B(dbc.CardHeader(f"Last explanation : Improver")),
-                    dbc.CardBody(
-                        [
-
-                            html.H4(f"Action", className="card-title"),
-                            html.P(f"{conclusion['action']}", className="card-text"),
-
-                            # html.H4(f"Reason", className="card-title"),
-                            # html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
-
-                            html.H4(f"Result", className="card-title"),
-                            html.P(f"{conclusion['result']}", className="card-text")
-                        ]
-                    ),
-            ]
-            card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
-                           width=5)
-        except:
-            return None
-    else:
-        return None
-
-    return card
 
 def set_cards(client):
     experiment = client.get_experiment_by_name("Scanflow")
@@ -218,8 +319,8 @@ def set_cards(client):
     executor_cards = html.Div(executor_rows)
 
     agent_rows = layout_rows(agent_cards)
-    row = get_explanations(client)
-    agent_rows.append(row)
+    rows = get_explanations(client)
+    agent_rows.extend(rows)
     agent_cards = html.Div(agent_rows)
 
     return cards, executor_cards, agent_cards

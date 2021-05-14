@@ -30,7 +30,7 @@ client = MlflowClient()
 @click.option("--y_new_train_artifact", default='dataset/y_new_train_artifact.npy', type=str)
 @click.option("--x_test_path", default='./images', type=str)
 @click.option("--y_test_path", default='./images', type=str)
-@click.option("--epochs", default=6, type=int)
+@click.option("--epochs", default=7, type=int)
 def retraining(model_name, run_id, x_new_train_artifact, y_new_train_artifact, x_test_path, y_test_path, epochs):
     with mlflow.start_run(run_name='retraining') as mlrun:
 
@@ -85,7 +85,7 @@ def retraining(model_name, run_id, x_new_train_artifact, y_new_train_artifact, x
         else:
             mlflow.pytorch.save_model(model, model_path)
             
-        mlflow.log_metric(key='accuracy', value=round(score, 2))
+        mlflow.log_metric(key='accuracy', value=round(score, 3))
         mlflow.log_param(key='x_len', value=x_train.shape[0])
 
         mlflow.log_artifact(x_train_path)

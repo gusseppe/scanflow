@@ -86,7 +86,7 @@ async def execute_planner(conclusions: dict):
     )
 
     conclusions.update({"result":
-                            f"Current model has been archived. New model is labeled as 'Production'"})
+                            f"Current model has been archived.\n New model is labeled as 'Production'"})
     response = {'Plan': conclusions}
 
 
