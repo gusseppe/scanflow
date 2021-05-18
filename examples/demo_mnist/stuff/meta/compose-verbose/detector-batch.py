@@ -18,26 +18,33 @@ from pathlib import Path
 client = MlflowClient()
 
 @click.command(help="Detect anomalies")
-@click.option("--run_id", default='be066cefe8784a248aa3f6e89f70d4f6', type=str)
+@click.option("--run_training_id", default='be066cefe8784a248aa3f6e89f70d4f6', type=str)
+@click.option("--run_inference_id", default='be066cefe8784a248aa3f6e89f70d4f6', type=str)
+@click.option("--x_train_artifact", default='x_train.npy', type=str)
 @click.option("--x_inference_artifact", default='x_inference.npy', type=str)
 @click.option("--y_inference_artifact", default='y_inference.npy', type=str)
 @click.option("--detector_path", help="",
               default='./detector.hdf5', type=str)
-def detector(run_id, x_inference_artifact, y_inference_artifact, detector_path):
+def detector(run_training_id, run_inference_id, x_train_artifact, x_inference_artifact, y_inference_artifact, detector_path):
     with mlflow.start_run(run_name='detector') as mlrun:
         
-
-        client.download_artifacts(run_id,
+        client.download_artifacts(run_training_id,
+                                  x_train_artifact,
+                                  '/tmp/')
+        client.download_artifacts(run_inference_id,
                                   x_inference_artifact,
                                   '/tmp/')
-        client.download_artifacts(run_id,
+        client.download_artifacts(run_inference_id,
                                   y_inference_artifact,
                                   '/tmp/')
+        
+        x_train_path = os.path.join('/tmp', x_train_artifact)
         x_inference_path = os.path.join('/tmp', x_inference_artifact)
         y_inference_path = os.path.join('/tmp', y_inference_artifact)
         
         img_rows, img_cols = 28, 28
-#         x_train = np.load(x_train_path)
+        
+        x_train = np.load(x_train_path)
         x_inference = np.load(x_inference_path)
         y_inference = np.load(y_inference_path)
         
@@ -45,14 +52,14 @@ def detector(run_id, x_inference_artifact, y_inference_artifact, detector_path):
         x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
         
         date = datetime.today()
-
-        detector, E_full, E_test, test = detector_utils.get_detector(x_inference, x_inference, 
-                                                    epochs=10, 
-                                                    model_path=detector_path,
-                                                    date=date, 
-                                                    wanted_anomalies=5)
+        wanted_anomalies = int(x_inference.shape[0]*0.4)
+        detector, E_full, E_test, test = detector_utils.get_detector(x_train, x_inference, 
+                            epochs=10, 
+                            model_path=detector_path,
+                            date=date, 
+                            wanted_anomalies=wanted_anomalies)
         
-        n_critical_points = 5
+        n_critical_points = int(wanted_anomalies*0.10)
         x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test, 
                                                                        x_inference, y_inference,
                                                                        n_critical_points)

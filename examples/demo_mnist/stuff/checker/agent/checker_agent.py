@@ -151,7 +151,9 @@ async def execute_checker_anomaly(content: Dict[str, str]):
         'name': 'detector-inference-mnist-detector-batch',
         # 'name': 'detector-mnist',
         'parameters':{
-            'run_id': content['run_inference_id'],
+            'run_training_id': content['run_training_id'],
+            'run_inference_id': content['run_inference_id'],
+            'x_train_artifact': content['x_train_artifact'],
             'x_inference_artifact': content['x_inference_artifact'],
             'y_inference_artifact': content['y_inference_artifact']
         },
