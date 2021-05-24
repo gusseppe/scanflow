@@ -2,7 +2,7 @@ version: '3'
 services:
   tracker-inference-mnist:
     image: tracker-inference-mnist
-    container_name: tracker-inference-mnist-20210518122032
+    container_name: tracker-inference-mnist-20210519102328
     networks:
     - network-inference-mnist
     volumes:
