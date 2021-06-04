@@ -1089,7 +1089,7 @@ def track_scanflow_info(workflow_user, app_dir, host_gateway):
     mlflow.set_tracking_uri(f"http://0.0.0.0:{tracker_port}")
     client = MlflowClient()
     experiment_name = 'Scanflow'
-    time.sleep(2) # Wait 2 seconds to avoid request error bc mlflow is not ready
+    time.sleep(3) # Wait 3 seconds to avoid request error bc mlflow is not ready
     experiment = client.get_experiment_by_name(experiment_name)
 
     if experiment:
