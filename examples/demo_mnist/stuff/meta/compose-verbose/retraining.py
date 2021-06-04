@@ -59,7 +59,10 @@ def retraining(model_name, run_id, x_new_train_artifact, y_new_train_artifact, x
 
 
         model = MNIST()
-        trainer = pl.Trainer(max_epochs=epochs, progress_bar_refresh_rate=20)
+        trainer = pl.Trainer(max_epochs=epochs, 
+                             progress_bar_refresh_rate=20,
+                             deterministic=True,
+                             checkpoint_callback=False, logger=False)
         trainer.fit(model, train_dataloader=loaders_train.train_dataloader(), 
                     val_dataloaders=loaders_train.val_dataloader())
 
