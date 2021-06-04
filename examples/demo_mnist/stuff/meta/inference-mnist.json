@@ -1,1 +1,0 @@
-{"name": "inference-mnist", "tracker": {"port": 8002}, "supervisor": {"port": 8003}, "checker": {"port": 8004}, "improver": {"port": 8005}, "planner": {"port": 8006}, "parallel": false, "executors": [], "app_dir": "/home/guess/Desktop/scanflow/examples/demo_mnist/"}

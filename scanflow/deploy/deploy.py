@@ -3,6 +3,7 @@
 # License: BSD 3 clause
 
 import logging
+import time
 import subprocess
 import os
 import docker
