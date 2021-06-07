@@ -86,12 +86,16 @@ def supervisor_explanation(client):
                                      executor_name=agent_name,
                                      client=client)
 
-    x_train_len = data.params['x_train_len']
-    x_inference_len = data.params['x_inference_len']
-    training_executor_name = data.params['training_executor_name']
-    inference_executor_name = data.params['inference_executor_name']
+    # x_train_len = data.params['x_train_len']
+    # x_inference_len = data.params['x_inference_len']
+    # training_executor_name = data.params['training_executor_name']
+    # inference_executor_name = data.params['inference_executor_name']
 
-    if x_train_len and x_inference_len and training_executor_name and inference_executor_name:
+    if data:
+        x_train_len = data.params['x_train_len']
+        x_inference_len = data.params['x_inference_len']
+        training_executor_name = data.params['training_executor_name']
+        inference_executor_name = data.params['inference_executor_name']
 
         card_content = [
             html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
@@ -121,21 +125,29 @@ def supervisor_explanation(client):
 
 def checker_explanation(client):
     agent_name = "Checker"
-    n_anomalies = agent.get_metadata(experiment_name=agent_name,
-                                    executor_name=agent_name,
-                                    param='n_anomalies',
-                                    client=client)
-    x_chosen_len = agent.get_metadata(experiment_name=agent_name,
-                                     executor_name=agent_name,
-                                     param='x_chosen_len',
-                                     client=client)
-    x_new_train_len = agent.get_metadata(experiment_name=agent_name,
-                                      executor_name=agent_name,
-                                      param='x_new_train_len',
-                                      client=client)
-    x_train = int(x_new_train_len) - int(x_chosen_len)
+    # n_anomalies = agent.get_metadata(experiment_name=agent_name,
+    #                                 executor_name=agent_name,
+    #                                 param='n_anomalies',
+    #                                 client=client)
+    # x_chosen_len = agent.get_metadata(experiment_name=agent_name,
+    #                                  executor_name=agent_name,
+    #                                  param='x_chosen_len',
+    #                                  client=client)
+    # x_new_train_len = agent.get_metadata(experiment_name=agent_name,
+    #                                   executor_name=agent_name,
+    #                                   param='x_new_train_len',
+    #                                   client=client)
 
-    if n_anomalies and x_chosen_len and x_new_train_len:
+    data = agent.get_metadata(experiment_name=agent_name,
+                              executor_name=agent_name,
+                              client=client)
+    if data:
+        n_anomalies = data.params['n_anomalies']
+        x_chosen_len = data.params['x_chosen_len']
+        x_new_train_len = data.params['x_new_train_len']
+
+        x_train = int(x_new_train_len) - int(x_chosen_len)
+
 
         card_content = [
             html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
@@ -163,43 +175,50 @@ def checker_explanation(client):
 def improver_explanation(client):
     agent_name = "Improver"
 
-    action = agent.get_metadata(experiment_name=agent_name,
-                                         executor_name=agent_name,
-                                         param='action',
-                                         client=client)
-    result = agent.get_metadata(experiment_name=agent_name,
-                                executor_name=agent_name,
-                                param='result',
-                                client=client)
+    # action = agent.get_metadata(experiment_name=agent_name,
+    #                                      executor_name=agent_name,
+    #                                      param='action',
+    #                                      client=client)
+    # result = agent.get_metadata(experiment_name=agent_name,
+    #                             executor_name=agent_name,
+    #                             param='result',
+    #                             client=client)
+    #
+    # p_anomalies = agent.get_metadata(experiment_name=agent_name,
+    #                             executor_name=agent_name,
+    #                             param='p_anomalies',
+    #                             client=client)
+    data = agent.get_metadata(experiment_name=agent_name,
+                              executor_name=agent_name,
+                              client=client)
+    if data:
+        action = data.params['action']
+        result = data.params['result']
+        p_anomalies = data.params['p_anomalies']
 
-    p_anomalies = agent.get_metadata(experiment_name=agent_name,
-                                executor_name=agent_name,
-                                param='p_anomalies',
-                                client=client)
-    if action and result and p_anomalies:
-        try:
-            card_content = [
-                html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
-                dbc.CardBody(
-                    [
+        # try:
+        card_content = [
+            html.H4(html.B(dbc.CardHeader(f"Last explanation : {agent_name}"))),
+            dbc.CardBody(
+                [
 
-                        html.H4(f"Action", className="card-title"),
-                        html.P(f"{action}", className="card-text"),
-                        html.P(f"p_anomalies = {p_anomalies}", className="card-text"),
-                        # html.P(f"{conclusion['action']}", className="card-text"),
+                    html.H4(f"Action", className="card-title"),
+                    html.P(f"{action}", className="card-text"),
+                    html.P(f"p_anomalies = {p_anomalies}", className="card-text"),
+                    # html.P(f"{conclusion['action']}", className="card-text"),
 
-                        # html.H4(f"Reason", className="card-title"),
-                        # html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
+                    # html.H4(f"Reason", className="card-title"),
+                    # html.P(f"Percentage anomalies > threshold (10%)", className="card-text"),
 
-                        html.H4(f"Result", className="card-title"),
-                        html.P(f"{result}", className="card-text"),
-                    ]
-                ),
-            ]
-            card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
-                           width=6)
-        except:
-            return None
+                    html.H4(f"Result", className="card-title"),
+                    html.P(f"{result}", className="card-text"),
+                ]
+            ),
+        ]
+        card = dbc.Col(dbc.Card(card_content, color="success", inverse=True),
+                       width=6)
+        # except:
+        #     return None
     else:
         return None
 
@@ -225,8 +244,8 @@ def planner_explanation(client):
     #                                order_by=["attribute.start_time DESC"],
     #                                max_results=1)
 
-    response = data.params
-    if response:
+    if data:
+        response = data.params
         # response = runs_info[0].data.params
 
         card_content = [
@@ -262,6 +281,7 @@ def get_explanations(client):
     card2 = checker_explanation(client)
     card3 = improver_explanation(client)
     card4 = planner_explanation(client)
+
     row1 = dbc.Row([card1, card2],
         className="mb-4",
     )

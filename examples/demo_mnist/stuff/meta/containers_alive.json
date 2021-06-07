@@ -1,1 +1,1 @@
-[]
+[{"name": "training-mnist-training", "file": "training.py", "parameters": {"model_name": "mnist_cnn", "epochs": 7, "x_train_path": "./mnist_sample/train_images.npy", "y_train_path": "./mnist_sample/train_labels.npy", "x_test_path": "./mnist/test_images.npy", "y_test_path": "./mnist/test_labels.npy"}, "requirements": "req_training.txt", "type": "executor"}, {"name": "tracker-mlflow", "type": "tracker", "port": 8002}]

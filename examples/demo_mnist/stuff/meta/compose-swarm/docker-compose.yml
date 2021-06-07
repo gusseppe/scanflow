@@ -2,7 +2,7 @@ version: '3'
 services:
   training:
     image: training
-    container_name: training-20210604115337
+    container_name: training-20210607071149
     networks:
     - network-training-mnist
     depends_on:
@@ -14,7 +14,7 @@ services:
     - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-training-mnist:/mlflow
   tracker-training-mnist:
     image: tracker-training-mnist
-    container_name: tracker-training-mnist-20210604115337
+    container_name: tracker-training-mnist-20210607071149
     networks:
     - network-training-mnist
     volumes:
