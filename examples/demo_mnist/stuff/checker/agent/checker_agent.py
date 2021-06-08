@@ -29,8 +29,9 @@ class Config():
     # app_dir = '/home/guess/Desktop/scanflow/examples/demo_mnist/'
     host_uri = agent.get_host_uri()
     host_uri = f"{host_uri}/run/executor"
-    # host_uri = 'http://192.168.96.1:8050/run/executor'
-    # host_uri = 'http://192.168.96.1:8050/run/workflow'
+
+    agents_uri = agent.get_agents_uri()
+    improver_agent_uri = f"{agents_uri['improver']}/improver/retrain_from_labels"
 
 experiment = client.get_experiment_by_name(agent_name)
 
@@ -55,19 +56,23 @@ async def startup_event():
 async def shutdown_event():
     await app.aiohttp_session.close()
 
-class Feedback(BaseModel):
+class Feedback():
     url: str
     name: str
 
-class Receiver(BaseModel):
+class Receiver():
     name: str
     address: str #HttpUrl
 
-class Message(BaseModel):
-    performative: str
-    content: str
-    # receiver: Receiver
-    # content: List[Feedback] = []
+class Message(object):
+    def __init__(self,
+                 content: dict,
+                 performative: str,
+                 receiver: str):
+
+        self.content = content
+        self.performative = performative
+        self.receiver = receiver
 
 
 
@@ -227,7 +232,7 @@ async def execute_checker_anomaly(content: Dict[str, str]):
     # p_anomalies = sum(d_anomalies['anomalies'])/len(d_anomalies['anomalies'])
 
     feedback = {
-        'inference_run_id': content['run_inference_id'],
+        'run_inference_id': content['run_inference_id'],
         'x_inference_artifact': content['x_inference_artifact'],
         'y_inference_artifact': content['y_inference_artifact'],
 
@@ -239,7 +244,8 @@ async def execute_checker_anomaly(content: Dict[str, str]):
         'y_new_train_artifact': 'y_new_train.npy',
 
         'n_anomalies': int(n_anomalies),
-        'percentage_anomalies': float(p_anomalies)
+        'percentage_anomalies': float(p_anomalies),
+        'x_chosen_len': len(x_new_train)
     }
 
     feedback_filename = 'feedback_anomaly.json'
@@ -261,6 +267,9 @@ async def execute_checker_anomaly(content: Dict[str, str]):
         # mlflow.log_artifact('x_new_train.npy', 'Improver')
         mlflow.log_artifact('y_new_train.npy')
         mlflow.log_artifact(feedback_filename)
+
+        mlflow.log_param(key='run_inference_id',
+                         value=content['run_inference_id']),
         mlflow.log_param(key='x_chosen_len',
                          value=f"{len(x_chosen)}")
         mlflow.log_param(key='x_new_train_len',
@@ -269,7 +278,7 @@ async def execute_checker_anomaly(content: Dict[str, str]):
                          value=f"{n_anomalies}")
         mlflow.log_param(key='p_anomalies',
                          value=f"{p_anomalies}")
-        mlflow.log_param(key='feedback',
+        mlflow.log_param(key='feedback_filename',
                          value=f"{feedback_filename}")
         # mlflow.log_param(key='feedback',
         #                  value=f"{artifact_name}/{feedback_filename}")
@@ -279,6 +288,128 @@ async def execute_checker_anomaly(content: Dict[str, str]):
     response = {"feedback": feedback}
 
     return response
+
+@app.post("/checker/labeling",
+          tags=['Actions'],
+          summary="Receive labels from Human annotator and send to Improver")
+async def receive_labels_from_human(content: Dict[str, str]):
+
+    # Get labelled data
+    client.download_artifacts(content['run_detector_id'],
+                              content['x_chosen_artifact'],
+                              '/tmp/')
+    client.download_artifacts(content['run_labeling_id'],
+                              content['y_labels_artifact'],
+                              '/tmp/')
+
+    # We get this info to know where the x_chosen comes from (inference)
+    run_detector = client.get_run(content['run_detector_id'])
+    run_inference_id = run_detector.data.params['run_inference_id']
+    n_anomalies = run_detector.data.params['n_anomalies']
+    p_anomalies = run_detector.data.params['p_anomalies']
+
+    x_chosen_path = os.path.join('/tmp', content['x_chosen_artifact'])
+    y_chosen_path = os.path.join('/tmp', content['y_labels_artifact']) # labels
+
+    x_chosen = np.load(x_chosen_path)
+    y_chosen = np.load(y_chosen_path)
+
+    # Training data from training executor
+    training_executor_name = "training"
+    runs_info_training = client.search_runs('0', f"tag.mlflow.runName='{training_executor_name}'",
+                                            order_by=["attribute.start_time DESC"],
+                                            max_results=1)
+    last_run_training_id = runs_info_training[0].info.run_id
+    # x_train_artifact = runs_info_training[0].data.params['x_train_artifact']
+    # y_train_artifact = runs_info_training[0].data.params['y_train_artifact']
+
+    x_train_artifact = "x_train.npy"
+    y_train_artifact = "y_train.npy"
+
+    client.download_artifacts(last_run_training_id,
+                              x_train_artifact,
+                              '/tmp/')
+    client.download_artifacts(last_run_training_id,
+                              y_train_artifact,
+                              '/tmp/')
+
+    x_train_path = os.path.join('/tmp', x_train_artifact)
+    y_train_path = os.path.join('/tmp', y_train_artifact)
+
+    x_train = np.load(x_train_path)
+    y_train = np.load(y_train_path)
+
+    # Append training data + labelled data
+    x_new_train = np.append(x_train, x_chosen, axis=0)
+    y_new_train = np.append(y_train, y_chosen, axis=0)
+
+    print(x_new_train.shape)
+
+    with open('x_new_train.npy', 'wb') as f:
+        np.save(f, x_new_train)
+    with open('y_new_train.npy', 'wb') as f:
+        np.save(f, y_new_train)
+
+    feedback = {
+        'run_inference_id': run_inference_id,
+
+        'run_detector_id': content['run_detector_id'],
+        'x_chosen_artifact': content['x_chosen_artifact'],
+
+        'run_labeling_id': content['run_labeling_id'],
+        'y_labels_artifact': content['y_labels_artifact'],
+
+        'x_new_train_artifact': 'x_new_train.npy',
+        'y_new_train_artifact': 'y_new_train.npy',
+    }
+
+    feedback_filename = 'feedback_anomaly.json'
+
+    with open(feedback_filename, 'w') as fout:
+        json.dump(feedback, fout)
+
+    with mlflow.start_run(experiment_id=experiment_id,
+                          run_name=agent_name) as mlrun:
+        mlflow.log_artifact(x_chosen_path)
+        mlflow.log_artifact(y_chosen_path)
+
+        mlflow.log_artifact('x_new_train.npy')
+        mlflow.log_artifact('y_new_train.npy')
+        mlflow.log_artifact(feedback_filename)
+
+        mlflow.log_param(key='x_chosen_len',
+                         value=f"{len(x_chosen)}")
+
+        mlflow.log_param(key='run_inference_id',
+                         value=run_inference_id),
+        mlflow.log_param(key='run_detector_id',
+                         value=content['run_detector_id']),
+        mlflow.log_param(key='run_labeling_id',
+                         value=content['run_labeling_id']),
+
+        mlflow.log_param(key='n_anomalies',
+                         value=f"{n_anomalies}")
+        mlflow.log_param(key='p_anomalies',
+                         value=f"{p_anomalies}")
+        mlflow.log_param(key='x_new_train_len',
+                         value=f"{len(x_new_train)}")
+        mlflow.log_param(key='feedback_filename',
+                         value=f"{feedback_filename}")
+
+    feedback['checker_agent_run_id'] = mlrun.info.run_id
+    print(feedback)
+
+
+    message = Message(feedback, "INFORM", Config.improver_agent_uri)
+    async with app.aiohttp_session.post(message.receiver, json=message.content) as response:
+        result_improver = await response.json(content_type=None)
+
+    print(result_improver)
+
+    response = feedback
+
+    return response
+
 
 @app.get("/feedback/anomaly/last",
          tags=['Beliefs'],

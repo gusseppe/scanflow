@@ -18,6 +18,7 @@ from scanflow.special.checker import Checker
 from scanflow.special.improver import Improver
 from scanflow.special.planner import Planner
 from scanflow.special.predictor import Predictor
+from scanflow.special.user_interface import UserInterface
 
 from textwrap import dedent
 from shutil import copy2
@@ -285,6 +286,7 @@ class Workflow(object):
                  improver: Improver = None,
                  planner: Planner = None,
                  predictor: Predictor = None,
+                 user_interface: UserInterface = None,
                  parallel: bool = False):
 
         self.name = name
@@ -295,6 +297,7 @@ class Workflow(object):
         self._improver = improver
         self._planner = planner
         self._predictor = predictor
+        self._user_interface = user_interface
 
         self.parallel = parallel
         self._to_dict = locals()
@@ -367,6 +370,15 @@ class Workflow(object):
             raise TypeError('The added predictor must be '
                             'an instance of class Predictor. '
                             'Found: ' + str(self._predictor[0]))
+
+    @property
+    def user_interface(self):
+        if self._user_interface and isinstance(self._user_interface, UserInterface):
+            return self._user_interface
+        else:
+            raise TypeError('The added user_interface must be '
+                            'an instance of class UserInterface. '
+                            'Found: ' + str(self._user_interface[0]))
     @property
     def to_dict(self):
         tmp_dict = self._to_dict
@@ -388,6 +400,8 @@ class Workflow(object):
             if k == 'planner':
                 tmp_dict[k] = v.to_dict
             if k == 'predictor':
+                tmp_dict[k] = v.to_dict
+            if k == 'user_interface':
                 tmp_dict[k] = v.to_dict
 
         tmp_dict['executors'] = executors_list

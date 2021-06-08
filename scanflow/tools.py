@@ -261,6 +261,34 @@ def compose_template_swarm(paths, workflows):
     return compose_dic, main_file
 
 
+def dockerfile_template_user_interface(user_interface):
+    base_image = user_interface['image']
+    port = user_interface['port']
+    file = user_interface['file']
+    # function = user_interface['function']
+
+    name = 'user_interface'
+    home = f'/home/dev/{name}'
+
+    # file = file.replace('.py', '')
+
+    template = dedent(f'''
+                FROM {base_image}
+
+                RUN pip install streamlit==0.82.0
+
+                RUN mkdir -p {home}
+                WORKDIR {home}
+
+                ENV UI_PORT {port}
+                CMD streamlit run {file} --server.port $UI_PORT
+
+    ''')
+    # template = base_template + template
+
+    return template
+
+
 def generate_dockerfile(folder, dock_type='executor',
                         executor=None,
                         workflow=None):
@@ -294,8 +322,10 @@ def generate_dockerfile(folder, dock_type='executor',
         filename = f"Dockerfile_predictor_ui_{workflow['name']}"
     elif dock_type == 'predictor_api':
         dockerfile = dockerfile_template_predictor_api(workflow['predictor'])
-        # logging.info(f'[+] Generating predictor: [{model}/{version}].')
         filename = f"Dockerfile_predictor_api_{workflow['name']}"
+    elif dock_type == 'user_interface':
+        dockerfile = dockerfile_template_user_interface(workflow['user_interface'])
+        filename = f"Dockerfile_user_interface_{workflow['name']}"
 
     dockerfile_path = os.path.join(folder, filename)
     with open(dockerfile_path, 'w') as f:

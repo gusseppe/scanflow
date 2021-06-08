@@ -163,6 +163,100 @@ async def execute_improver(feedback: dict):
 
     return  response
 
+@app.post("/improver/retrain_from_labels",
+          tags=['Actions'],
+          summary="Call improver to retrain model with human labels")
+async def retrain_from_labels(feedback: dict):
+
+    # feedback = {
+    #     'run_inference_id': run_inference_id,
+    #
+    #     'run_detector_id': content['run_detector_id'],
+    #     'x_chosen_artifact': content['x_chosen_artifact'],
+    #
+    #     'run_labeling_id': content['run_labeling_id'],
+    #     'y_labels_artifact': content['y_labels_artifact'],
+    #
+    #     'x_new_train_artifact': 'x_new_train.npy',
+    #     'y_new_train_artifact': 'y_new_train.npy',
+    # }
+
+    # Get the current model from tracker
+    relative_uri = "tracker/model/current"
+    uri = urllib.parse.urljoin(Config.supervisor_uri, relative_uri)
+    message = Message("", "INFORM", uri)
+    async with app.aiohttp_session.get(message.receiver) as response:
+        result_tracker = await response.json(content_type=None)
+
+    new_model_name = 'mnist_cnn_new'
+    scanflow_request = {
+        'name': 'retraining-mnist-retraining',
+        'parameters':{
+            'run_id': feedback['checker_agent_run_id'],
+            'model_name': new_model_name,
+            'x_new_train_artifact': feedback['x_new_train_artifact'],
+            'y_new_train_artifact': feedback['y_new_train_artifact'],
+            'x_test_path': './mnist/test_images.npy',
+            'y_test_path': './mnist/test_labels.npy',
+        },
+    }
+    async with app.aiohttp_session.post(Config.host_uri, json=scanflow_request) as response:
+        result_host = await response.json(content_type=None)
+
+    print(result_host)
+
+    old_metric = agent.get_metadata(executor_name='training', metric='accuracy')
+    new_metric = agent.get_metadata(executor_name='retraining', metric='accuracy')
+
+    if new_metric > old_metric:
+        relative_uri = "tracker/model/new"
+        uri = urllib.parse.urljoin(Config.supervisor_uri, relative_uri)
+        message = Message("", "INFORM", uri)
+        async with app.aiohttp_session.get(message.receiver) as response:
+            tracker_new_model = await response.json(content_type=None)
+        # Communicate with the Planner to do replaced the old model by the newer one
+        content = {'conclusions': {
+            'order': 'Transition',
+            'current_model_name': result_tracker['model']['name'],
+            'current_model_version': result_tracker['model']['version'],
+            'new_model_name': new_model_name,
+            'new_model_version': tracker_new_model['model']['version'],
+        }
+        }
+        message = Message(content, "INFORM", Config.planner_uri)
+        async with app.aiohttp_session.post(message.receiver, json=content) as response:
+            result_planner = await response.json(content_type=None)
+
+        response = {'conclusions': {
+                "action": f"Retraining was performed because Human labelled some data. Planner is triggered.",
+                # "action": f"Retraining was performed using the new augmented data={feedback['x_new_train_artifact']}",
+                "result":  f"current_metric={old_metric} < new_metric={new_metric}",
+                "planner": result_planner,
+            }
+        }
+    else:
+        response = {'conclusions': {
+                "action": f'Retraining was performed because Human labelled some data but Planner was not triggered.',
+                "result":  f"current_metric={new_metric} >= new_metric={new_metric}"
+            }
+        }
+
+    with open(Config.improver_filename, 'w') as fout:
+        json.dump(response, fout)
+
+    run_detector = client.get_run(feedback['run_detector_id'])
+    p_anomalies = run_detector.data.params['p_anomalies']
+
+    with mlflow.start_run(experiment_id=experiment_id,
+                          run_name=Config.agent_name) as mlrun:
+        mlflow.log_artifact(Config.improver_filename, 'Conclusions')
+        mlflow.log_params(response['conclusions'])
+        mlflow.log_param(key='p_anomalies',
+                         value=f"{p_anomalies}")
+
+    return  response
+
+
 @app.get("/improver/conclusions/last",
          tags=['Beliefs'],
          summary='Get last Improver conclusions')

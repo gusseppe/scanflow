@@ -27,7 +27,7 @@ client = MlflowClient()
               default='./detector.hdf5', type=str)
 def detector(run_training_id, run_inference_id, x_train_artifact, x_inference_artifact, y_inference_artifact, detector_path):
     with mlflow.start_run(run_name='detector') as mlrun:
-        
+
         client.download_artifacts(run_training_id,
                                   x_train_artifact,
                                   '/tmp/')
@@ -37,52 +37,52 @@ def detector(run_training_id, run_inference_id, x_train_artifact, x_inference_ar
         client.download_artifacts(run_inference_id,
                                   y_inference_artifact,
                                   '/tmp/')
-        
+
         x_train_path = os.path.join('/tmp', x_train_artifact)
         x_inference_path = os.path.join('/tmp', x_inference_artifact)
         y_inference_path = os.path.join('/tmp', y_inference_artifact)
-        
+
         img_rows, img_cols = 28, 28
-        
+
         x_train = np.load(x_train_path)
         x_inference = np.load(x_inference_path)
         y_inference = np.load(y_inference_path)
-        
+
 #         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols)
         x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
-        
+
         date = datetime.today()
         wanted_anomalies = int(x_inference.shape[0]*0.4)
-        detector, E_full, E_test, test = detector_utils.get_detector(x_train, x_inference, 
-                            epochs=10, 
+        detector, E_full, E_test, test = detector_utils.get_detector(x_train, x_inference,
+                            epochs=10,
                             model_path=detector_path,
-                            date=date, 
+                            date=date,
                             wanted_anomalies=wanted_anomalies)
-        
+
         n_critical_points = int(wanted_anomalies*0.10)
-        x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test, 
+        x_inference_chosen, y_inference_chosen = detector_utils.picker(E_test,
                                                                        x_inference, y_inference,
                                                                        n_critical_points)
         with open('x_inference_chosen.npy', 'wb') as f:
             np.save(f, x_inference_chosen)
         with open('y_inference_chosen.npy', 'wb') as f:
             np.save(f, y_inference_chosen)
-            
+
         mlflow.log_artifact('x_inference_chosen.npy')
-        mlflow.log_artifact('y_inference_chosen.npy')          
-        
+        mlflow.log_artifact('y_inference_chosen.npy')
+
 #         model_name = 'detector'
-#         mlflow.tensorflow.log_model(detector, artifact_path=model_name, 
-# #                                  signature=signature, 
+#         mlflow.tensorflow.log_model(detector, artifact_path=model_name,
+# #                                  signature=signature,
 #                                  registered_model_name=model_name,
 #                                  input_example=x_inference[:2])
-        
+
         E_full.to_csv("E_full.csv", index=True)
         E_test.to_csv("E_test.csv", index=True)
-        
+
 
         mlflow.log_param(key='n_anomalies', value=sum(E_test['Anomaly']))
- 
+
         print(E_test.head())
 
         mlflow.log_artifact('E_full.csv')

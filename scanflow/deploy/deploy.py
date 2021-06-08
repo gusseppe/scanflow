@@ -200,20 +200,6 @@ class Deploy:
             # metadata = tools.build_image(tracker_image_name, self.app_dir,
             #                              dockerfile_path, 'tracker', port)
             environments.append(metadata)
-            #
-            # if workflow['tracker']['mode'] == 'online':
-            #     port_agent = port + 1
-            #     dockerfile_agent_path = tools.generate_dockerfile(folder=meta_compose_dir,
-            #                                                       executor=workflow,
-            #                                                       dock_type='supervisor_agent',
-            #                                                       port=port_agent)
-            #
-            #     supervisor_agent_image_name = f"{workflow['name']}-supervisor-agent"
-            #     tracker_dir = os.path.join(self.paths['tracker_dir'], tracker_image_name )
-            #     metadata = tools.build_image(supervisor_agent_image_name, meta_compose_dir,
-            #                                  dockerfile_agent_path, 'supervisor-agent', port_agent, tracker_dir)
-            #
-            #     environments.append(metadata)
 
             if 'supervisor' in workflow.keys():
                 meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
@@ -284,6 +270,23 @@ class Deploy:
                 environments.append(metadata)
                 # else:
                 #     raise ValueError('Planner can be only deployed in online mode. Please set mode=online.')
+            if 'user_interface' in workflow.keys():
+                meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
+
+                # if workflow['planner']['mode'] == 'online':
+                port_user_interface = workflow['user_interface']['port']
+                dockerfile_user_interface_path = tools.generate_dockerfile(folder=meta_compose_dir,
+                                                                  workflow=workflow,
+                                                                  dock_type='user_interface')
+
+                user_interface_image_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface"
+                # user_interface_dir = os.path.join(self.paths['user_interface_dir'], user_interface_image_name )
+                metadata = tools.build_image(user_interface_image_name, meta_compose_dir,
+                                             dockerfile_user_interface_path, 'user_interface', port_user_interface)
+                # metadata = tools.build_image(service_image_name, meta_compose_dir,
+                #                              dockerfile_service_path, 'service', port_service, service_dir)
+
+                environments.append(metadata)
 
             if 'predictor' in workflow.keys():
                 meta_compose_dir = os.path.join(self.paths['meta_dir'], 'compose-verbose')
@@ -480,32 +483,6 @@ class Deploy:
             #                      'ctn': tracker_container, 'port': workflow['tracker']['port']}
 
             list_containers.append(tracker_container)
-
-            # if workflow['tracker']['mode'] == 'online':
-            #     container_path = '/home/dev/supervisor/agent'
-            #     workflow_tracker_dir_agent = os.path.join(workflow_tracker_dir, "agent" )
-            #     volumes = {workflow_tracker_dir_agent: {'bind': container_path, 'mode': 'rw'}}
-            #     kwargs['volumes'].update(volumes)
-            #
-            #     tracker_image_agent_name = f"{workflow['name']}-supervisor-agent"
-            #     tracker_tag_agent_name = f"{workflow['name']}-supervisor-agent"
-            #     port_agent = port + 1
-            #     ports_agent = {f"{port_agent}/tcp": port_agent}
-            #     # ports_agent = {f"{port_agent}/tcp": port_agent, f"22/tcp": 52022}
-            #     kwargs['ports'] = ports_agent
-            #     kwargs['environment'].update({'AGENT_PORT': port_agent})
-            #     supervisor_agent_container = tools.start_image(image=tracker_image_agent_name,
-            #                                           name=tracker_tag_agent_name,
-            #                                           network=net_name,
-            #                                           **kwargs)
-            #
-            #
-            #     supervisor_agent_container = {'name': tracker_image_agent_name, 'type':'agent',
-            #                          'port': port_agent}
-            #     # supervisor_agent_container = {'name': tracker_image_agent_name, 'type':'agent',
-            #     #                            'ctn': supervisor_agent_container, 'port': port_agent}
-            #     list_containers.append(supervisor_agent_container)
-
 
             if 'supervisor' in workflow.keys():
                 kwargs = dict()
@@ -743,14 +720,61 @@ class Deploy:
                 #                        'ctn': predictor_container, 'port': port}
                 list_containers.append(predictor_container)
 
+            if 'user_interface' in workflow.keys():
+                kwargs = dict()
+                # workflow_user_interface_dir = os.path.join(self.app_dir, 'workflow')
+                # workflow_user_interface_dir = self.paths['user_interface_dir']
+                host_path = os.path.join(self.app_dir, 'workflow')
+                # host_path = os.path.join(self.paths['user_interface_dir'], f"user_interface-{workflow['name']}" )
+                # os.makedirs(host_path, exist_ok=True)
+                container_path = '/home/dev/user_interface'
+
+                # workflow_tracker_dir_host = os.path.join(self.paths['tracker_dir'])
+                # workflow_tracker_dir_ctn = '/home/dev/mlflow'
+
+
+                env_var = {'MLFLOW_TRACKING_URI': f"http://tracker-mlflow:{workflow['tracker']['port']}"}
+
+                volumes = {host_path: {'bind': container_path, 'mode': 'rw'},
+                           workflow_tracker_dir_host: {'bind': workflow_tracker_dir_ctn, 'mode': 'rw'}}
+
+                kwargs['volumes'] = volumes
+                kwargs['environment'] = env_var
+
+                # container_path = '/home/dev/user_interface'
+                # container_path = '/user_interface/agent'
+                # workflow_user_interface_dir_agent = os.path.join(workflow_user_interface_dir, "agent" )
+                # volumes = {workflow_user_interface_dir: {'bind': container_path, 'mode': 'rw'}}
+                # kwargs['volumes'].update(volumes)
+
+                # Predictor ui
+                user_interface_image_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface"
+                user_interface_tag_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface"
+                port = workflow['user_interface']['port']
+                ports = {f"{port}/tcp": port}
+                kwargs['ports'] = ports
+                kwargs['environment'].update({'UI_PORT': port})
+                user_interface_container = tools.start_image(image=user_interface_image_name,
+                                                        name=user_interface_tag_name,
+                                                        network=net_name,
+                                                        **kwargs)
+
+                user_interface_container = {'name': user_interface_image_name, 'type':'user_interface',
+                                       'port': port}
+                # user_interface_container = {'name': user_interface_image_name, 'type':'user_interface',
+                #                        'ctn': user_interface_container, 'port': port}
+                list_containers.append(user_interface_container)
+
             containers.extend(list_containers)
             # return containers, list_containers
 
         return containers
         # return containers, [None]
 
-    def stop_workflows(self, tracker=True, supervisor=True, checker=True,
-                       improver=True, planner=True, predictor=True, network=True):
+    def stop_workflows(self, tracker=True, supervisor=True,
+                       checker=True, improver=True,
+                       planner=True, predictor=True,
+                       user_interface=True, network=True):
         """
         Stop containers in each workflow but not the trackers.
 
@@ -760,12 +784,14 @@ class Deploy:
 
         for wflow in self.workflows_user:
             containers_removed = self.__stop_workflow(wflow, tracker, supervisor, checker,
-                                                      improver, planner, predictor, network)
+                                                      improver, planner, predictor,
+                                                      user_interface, network)
 
             tools.remove_track_containers(containers_removed, self.paths['meta_dir'])
 
     def __stop_workflow(self, workflow, tracker, supervisor,
-                        checker, improver, planner, predictor, network):
+                        checker, improver, planner,
+                        predictor, user_interface, network):
         container_names = list()
 
         for executor in workflow['executors']:
@@ -875,6 +901,21 @@ class Deploy:
                 except docker.api.client.DockerException as e:
                     # logging.error(f"{e}")
                     logging.info(f"[+] Predictor API: [{predictor_image_name}] is not running in local.")
+        if user_interface:
+            if 'user_interface' in workflow.keys():
+
+                # if workflow['tracker']['mode'] == 'online':
+                user_interface_image_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface-agent"
+                try:
+                    container_from_env = client.containers.get(user_interface_image_name)
+                    container_from_env.stop()
+                    container_from_env.remove()
+                    logging.info(f"[+] UserInterface: [{user_interface_image_name}] was stopped successfully.")
+
+                    container_names.append(user_interface_image_name)
+                except docker.api.client.DockerException as e:
+                    # logging.error(f"{e}")
+                    logging.info(f"[+] UserInterface: [{user_interface_image_name}] is not running in local.")
 
         client.containers.prune()
         logging.info(f'[+] Stopped containers were pruned.')
