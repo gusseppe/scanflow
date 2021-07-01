@@ -1,13 +1,25 @@
 version: '3'
 services:
-  tracker-inference-mnist:
-    image: tracker-inference-mnist
-    container_name: tracker-inference-mnist-20210607172944
+  detector-training:
+    image: detector-training
+    container_name: detector-training-20210701040734
     networks:
-    - network-inference-mnist
+    - network-detector-training-mnist
+    depends_on:
+    - tracker-detector-training-mnist
+    environment:
+      MLFLOW_TRACKING_URI: http://tracker-detector-training-mnist:8002
     volumes:
-    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-inference-mnist:/mlflow
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/:/executor
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-detector-training-mnist:/mlflow
+  tracker-detector-training-mnist:
+    image: tracker-detector-training-mnist
+    container_name: tracker-detector-training-mnist-20210701040734
+    networks:
+    - network-detector-training-mnist
+    volumes:
+    - /home/guess/Desktop/scanflow/examples/demo_mnist/stuff/tracker/tracker-detector-training-mnist:/mlflow
     ports:
     - 8007:8002
 networks:
-  network_inference-mnist: null
+  network_detector-training-mnist: null

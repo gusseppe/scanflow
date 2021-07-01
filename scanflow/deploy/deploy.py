@@ -905,7 +905,7 @@ class Deploy:
             if 'user_interface' in workflow.keys():
 
                 # if workflow['tracker']['mode'] == 'online':
-                user_interface_image_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface-agent"
+                user_interface_image_name = f"{workflow['name']}-{workflow['user_interface']['name']}-user_interface"
                 try:
                     container_from_env = client.containers.get(user_interface_image_name)
                     container_from_env.stop()

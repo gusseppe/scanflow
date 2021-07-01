@@ -49,7 +49,7 @@ def detector(run_training_id, run_inference_id, x_train_artifact, x_inference_ar
         y_inference = np.load(y_inference_path)
 
 #         x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols)
-        x_inference = x_inference.reshape(x_inference.shape[0], (img_rows, img_cols))
+        x_inference = x_inference.reshape(x_inference.shape[0], img_rows, img_cols)
 
         date = datetime.today()
         wanted_anomalies = int(x_inference.shape[0]*0.4)
