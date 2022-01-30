@@ -154,3 +154,10 @@ Installation
 
     pip install scanflow
     
+References
+------------   
+
+**Colab experiments**
+- https://colab.research.google.com/drive/1t0EgpPk5_mEMNb_AvN7yJ_Tz88bqgS9A?usp=sharing
+- https://colab.research.google.com/drive/1tdGqg5WAGGhdZEd0HI5ZYQtRFAkrOvJO?usp=sharing
+- https://colab.research.google.com/drive/147NDiwsiY86xpUIsM-btMPMSzTktsNd6?usp=sharing
