@@ -159,8 +159,12 @@ References
 
 **Colab experiments**
 
-- MNIST: https://colab.research.google.com/drive/1t0EgpPk5_mEMNb_AvN7yJ_Tz88bqgS9A?usp=sharing
+- MNIST and MNIST-C: https://colab.research.google.com/drive/1t0EgpPk5_mEMNb_AvN7yJ_Tz88bqgS9A?usp=sharing
 
-- FashionMNIST: https://colab.research.google.com/drive/1tdGqg5WAGGhdZEd0HI5ZYQtRFAkrOvJO?usp=sharing
+- FashionMNIST and FashionMNIST-C: https://colab.research.google.com/drive/1tdGqg5WAGGhdZEd0HI5ZYQtRFAkrOvJO?usp=sharing
 
-- CIFAR-10: https://colab.research.google.com/drive/147NDiwsiY86xpUIsM-btMPMSzTktsNd6?usp=sharing
+- CIFAR-10 and CIFAR-10-C: https://colab.research.google.com/drive/147NDiwsiY86xpUIsM-btMPMSzTktsNd6?usp=sharing
+
+- CIFAR-100 and CIFAR-100-C: https://colab.research.google.com/drive/1E0yKwJvFbbO4q_eNYBtqneLQV6lh_bMO?usp=sharing
+
+- TinyImagenet and TinyImagenet-C: https://colab.research.google.com/drive/1P9rEFAblhifcVq8591qsVqf840vXqQk0?usp=sharing
