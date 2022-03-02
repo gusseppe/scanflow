@@ -168,3 +168,9 @@ References
 - CIFAR-100 and CIFAR-100-C: https://colab.research.google.com/drive/1E0yKwJvFbbO4q_eNYBtqneLQV6lh_bMO?usp=sharing
 
 - TinyImagenet and TinyImagenet-C: https://colab.research.google.com/drive/1P9rEFAblhifcVq8591qsVqf840vXqQk0?usp=sharing
+
+Simulated environment for sequential decision making 
+------------------------------------------------
+
+- Improving trust score in classfiers: https://colab.research.google.com/drive/1WOFYXfJ-I8JFtPE0EJ_iEmkNdy6_aetD?usp=sharing
+
