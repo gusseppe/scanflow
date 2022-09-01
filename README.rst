@@ -1,6 +1,10 @@
 ==========
-Scanflow [WORK IN PROGRESS]
+Scanflow
 ==========
+This is the code repository for the paper: "Scanflow: A multi-graph framework for Machine Learning workflow management, supervision, and debugging".
+Links: 
+    - https://www.sciencedirect.com/science/article/abs/pii/S0957417422006066
+    - https://arxiv.org/abs/2111.03003
 
 ..
     .. image:: https://img.shields.io/pypi/v/scanflow.svg
